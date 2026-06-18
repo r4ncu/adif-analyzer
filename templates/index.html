@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ADIF Analyzer</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            min-height: 100vh;
+            padding: 2rem 1rem;
+        }
+        .container { max-width: 800px; margin: 0 auto; }
+        h1 {
+            text-align: center;
+            font-size: 1.8rem;
+            margin-bottom: 0.3rem;
+            color: #38bdf8;
+        }
+        .subtitle {
+            text-align: center;
+            color: #64748b;
+            font-size: 0.9rem;
+            margin-bottom: 2rem;
+        }
+        .card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.4rem;
+            color: #94a3b8;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 0.7rem 0.9rem;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            background: #0f172a;
+            color: #e2e8f0;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        input[type="text"]:focus { border-color: #38bdf8; }
+        .input-row { display: flex; gap: 1rem; margin-bottom: 1rem; }
+        .input-row > div { flex: 1; }
+        .file-zone {
+            border: 2px dashed #334155;
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+            margin-bottom: 0.5rem;
+        }
+        .file-zone:hover, .file-zone.dragover {
+            border-color: #38bdf8;
+            background: rgba(56, 189, 248, 0.05);
+        }
+        .file-zone input { display: none; }
+        .file-zone .icon { font-size: 2rem; margin-bottom: 0.5rem; }
+        .file-zone p { color: #64748b; font-size: 0.9rem; }
+        .file-list {
+            margin-top: 0.5rem;
+            font-size: 0.85rem;
+            color: #94a3b8;
+        }
+        .file-list span { display: inline-block; background: #334155; padding: 0.2rem 0.6rem; border-radius: 4px; margin: 0.2rem 0.2rem 0.2rem 0; }
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 0.85rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .btn:active { transform: scale(0.98); }
+        .btn-primary { background: #2563eb; color: #fff; }
+        .btn-primary:hover { background: #1d4ed8; }
+        .btn-primary:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
+        .btn-download {
+            display: inline-block;
+            margin-top: 1rem;
+            padding: 0.6rem 1.2rem;
+            background: #16a34a;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .btn-download:hover { background: #15803d; }
+        .spinner {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+        .spinner.active { display: block; }
+        .spinner::after {
+            content: '';
+            display: inline-block;
+            width: 32px;
+            height: 32px;
+            border: 3px solid #334155;
+            border-top-color: #38bdf8;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spinner-text { margin-top: 0.8rem; color: #64748b; font-size: 0.9rem; }
+        #result { display: none; }
+        #result.active { display: block; }
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .result-header h2 { color: #22c55e; font-size: 1.2rem; }
+        .result-text {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 1rem;
+            white-space: pre-wrap;
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+            font-size: 0.8rem;
+            line-height: 1.5;
+            max-height: 600px;
+            overflow-y: auto;
+            color: #cbd5e1;
+        }
+        .error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid #ef4444;
+            color: #fca5a5;
+            padding: 0.8rem 1rem;
+            border-radius: 8px;
+            display: none;
+        }
+        .error.active { display: block; }
+        .power-table { width: 100%; margin-top: 1rem; font-size: 0.85rem; }
+        .power-table td { padding: 0.3rem 0.5rem; border-bottom: 1px solid #1e293b; }
+        .power-table td:first-child { color: #94a3b8; white-space: nowrap; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ADIF Analyzer</h1>
+        <p class="subtitle">Анализ ADIF файлов — статистика по странам, локаторам и мощности</p>
+
+        <div class="card">
+            <form id="form">
+                <div class="input-row">
+                    <div>
+                        <label for="callsign">Позывной</label>
+                        <input type="text" id="callsign" name="callsign" placeholder="R3ABC" required>
+                    </div>
+                    <div>
+                        <label for="locator">Локатор</label>
+                        <input type="text" id="locator" name="locator" placeholder="LO48VI" required>
+                    </div>
+                </div>
+
+                <label>ADIF файл(ы)</label>
+                <div class="file-zone" id="fileZone">
+                    <div class="icon">+</div>
+                    <p>Нажмите или перетащите файлы сюда</p>
+                    <input type="file" id="fileInput" name="adif_files" accept=".adi,.adif" multiple>
+                </div>
+                <div class="file-list" id="fileList"></div>
+
+                <div style="margin-top: 1.2rem;">
+                    <button type="submit" class="btn btn-primary" id="submitBtn">АНАЛИЗ</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="error" id="error"></div>
+
+        <div class="spinner" id="spinner">
+            <div class="spinner-text">Анализ файлов, подождите...</div>
+        </div>
+
+        <div id="result" class="card">
+            <div class="result-header">
+                <h2>Результат анализа</h2>
+                <a class="btn-download" id="downloadBtn" href="#">Скачать TXT</a>
+            </div>
+            <div class="result-text" id="resultText"></div>
+        </div>
+    </div>
+
+    <script>
+        const fileZone = document.getElementById('fileZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileList = document.getElementById('fileList');
+        const form = document.getElementById('form');
+        const submitBtn = document.getElementById('submitBtn');
+        const spinner = document.getElementById('spinner');
+        const errorEl = document.getElementById('error');
+        const resultEl = document.getElementById('result');
+        const resultText = document.getElementById('resultText');
+        const downloadBtn = document.getElementById('downloadBtn');
+
+        fileZone.addEventListener('click', () => fileInput.click());
+        fileZone.addEventListener('dragover', e => { e.preventDefault(); fileZone.classList.add('dragover'); });
+        fileZone.addEventListener('dragleave', () => fileZone.classList.remove('dragover'));
+        fileZone.addEventListener('drop', e => {
+            e.preventDefault();
+            fileZone.classList.remove('dragover');
+            fileInput.files = e.dataTransfer.files;
+            showFiles(fileInput.files);
+        });
+        fileInput.addEventListener('change', () => showFiles(fileInput.files));
+
+        function showFiles(files) {
+            fileList.innerHTML = '';
+            for (const f of files) {
+                const s = document.createElement('span');
+                s.textContent = f.name;
+                fileList.appendChild(s);
+            }
+        }
+
+        form.addEventListener('submit', async e => {
+            e.preventDefault();
+            errorEl.classList.remove('active');
+            resultEl.classList.remove('active');
+            spinner.classList.add('active');
+            submitBtn.disabled = true;
+
+            const fd = new FormData();
+            fd.append('callsign', document.getElementById('callsign').value);
+            fd.append('locator', document.getElementById('locator').value);
+            for (const f of fileInput.files) {
+                fd.append('adif_files', f);
+            }
+
+            try {
+                const resp = await fetch('/analyze', { method: 'POST', body: fd });
+                const data = await resp.json();
+                if (!resp.ok) {
+                    throw new Error(data.error || 'Ошибка сервера');
+                }
+                resultText.textContent = data.result;
+                resultEl.classList.add('active');
+                downloadBtn.href = '/download/' + data.download_id;
+            } catch (err) {
+                errorEl.textContent = err.message;
+                errorEl.classList.add('active');
+            } finally {
+                spinner.classList.remove('active');
+                submitBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
