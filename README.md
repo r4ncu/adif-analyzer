@@ -1,6 +1,7 @@
 # ADIF Analyzer
 
 Веб-приложение для анализа ADIF-логов радиолюбителей.
+https://adif-analyzer.onrender.com
 
 ## Что делает
 
