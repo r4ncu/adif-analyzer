@@ -1,7 +1,7 @@
 import os
 import sys
-import tempfile
 import uuid
+import threading
 from flask import Flask, render_template, request, send_file, jsonify
 
 sys.path.insert(0, os.path.dirname(__file__))
@@ -12,6 +12,20 @@ app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
 
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), 'uploads')
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+jobs = {}
+jobs_lock = threading.Lock()
+
+
+def run_analysis(job_id, file_list, locator, output_file):
+    try:
+        analyze_files(file_list, locator, output_file)
+        with jobs_lock:
+            jobs[job_id]['status'] = 'done'
+    except Exception as e:
+        with jobs_lock:
+            jobs[job_id]['status'] = 'error'
+            jobs[job_id]['error'] = str(e)
 
 
 @app.route('/')
@@ -47,18 +61,31 @@ def analyze():
 
     output_file = os.path.join(job_dir, 'result.txt')
 
-    try:
-        analyze_files(saved_files, locator, output_file)
-    except Exception as e:
-        return jsonify({'error': f'Ошибка анализа: {str(e)}'}), 500
+    with jobs_lock:
+        jobs[job_id] = {'status': 'processing', 'output_file': output_file, 'error': None}
 
-    with open(output_file, 'r', encoding='utf-8') as fh:
-        result_text = fh.read()
+    thread = threading.Thread(target=run_analysis, args=(job_id, saved_files, locator, output_file), daemon=True)
+    thread.start()
 
-    return jsonify({
-        'result': result_text,
-        'download_id': job_id
-    })
+    return jsonify({'job_id': job_id})
+
+
+@app.route('/status/<job_id>')
+def status(job_id):
+    with jobs_lock:
+        job = jobs.get(job_id)
+
+    if not job:
+        return jsonify({'error': 'Задача не найдена'}), 404
+
+    if job['status'] == 'processing':
+        return jsonify({'status': 'processing'})
+    elif job['status'] == 'error':
+        return jsonify({'status': 'error', 'error': job['error']})
+    else:
+        with open(job['output_file'], 'r', encoding='utf-8') as fh:
+            result_text = fh.read()
+        return jsonify({'status': 'done', 'result': result_text, 'download_id': job_id})
 
 
 @app.route('/download/<job_id>')

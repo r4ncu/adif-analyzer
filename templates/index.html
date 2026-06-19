@@ -185,7 +185,7 @@
                 <div class="file-zone" id="fileZone">
                     <div class="icon">+</div>
                     <p>Нажмите или перетащите файлы сюда</p>
-                    <input type="file" id="fileInput" name="adif_files" accept=".adi,.adif" multiple>
+                    <input type="file" id="fileInput" name="adif_files" multiple>
                 </div>
                 <div class="file-list" id="fileList"></div>
 
@@ -262,9 +262,21 @@
                 if (!resp.ok) {
                     throw new Error(data.error || 'Ошибка сервера');
                 }
-                resultText.textContent = data.result;
-                resultEl.classList.add('active');
-                downloadBtn.href = '/download/' + data.download_id;
+
+                const jobId = data.job_id;
+                while (true) {
+                    await new Promise(r => setTimeout(r, 2000));
+                    const sr = await fetch('/status/' + jobId);
+                    const sd = await sr.json();
+                    if (sd.status === 'done') {
+                        resultText.textContent = sd.result;
+                        resultEl.classList.add('active');
+                        downloadBtn.href = '/download/' + sd.download_id;
+                        break;
+                    } else if (sd.status === 'error') {
+                        throw new Error(sd.error || 'Ошибка анализа');
+                    }
+                }
             } catch (err) {
                 errorEl.textContent = err.message;
                 errorEl.classList.add('active');
