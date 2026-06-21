@@ -111,10 +111,12 @@ def calculate_distance_approx(loc1, loc2):
     except:
         return 0
 
-def analyze_files(file_list, my_loc_str, output_file):
+def analyze_files(file_list, my_loc_str, output_file, power_override=None):
     """Анализирует список ADIF файлов и сохраняет общую статистику в один файл"""
     
     print(f"Начинаю анализ {len(file_list)} файлов...")
+    if power_override is not None:
+        print(f"Задана мощность для всех связей: {power_override} Вт")
     my_loc_str = normalize_locator(my_loc_str)
     
     # Инициализируем библиотеку для поиска информации
@@ -131,6 +133,7 @@ def analyze_files(file_list, my_loc_str, output_file):
     # Общая статистика для всех файлов
     # [name, max_pwr, count, [dist, call, pwr], countries, fields, squares]
     act_list = [
+        ["ALL", float('inf'), 0, [0.0, "", 0.0], set(), set(), set()],
         ["QRP", 5.0, 0, [0.0, "", 0.0], set(), set(), set()],
         ["QRPp", 1.0, 0, [0.0, "", 0.0], set(), set(), set()],
         ["QRP-X", 0.1, 0, [0.0, "", 0.0], set(), set(), set()],
@@ -199,8 +202,11 @@ def analyze_files(file_list, my_loc_str, output_file):
             bands_count[band] += 1
             
             # Парсим мощность
-            pwr_val = qso.get('tx_pwr') or qso.get('power') or qso.get('app_rumlog_power')
-            pwr = parse_power_custom(pwr_val)
+            if power_override is not None:
+                pwr = power_override
+            else:
+                pwr_val = qso.get('tx_pwr') or qso.get('power') or qso.get('app_rumlog_power')
+                pwr = parse_power_custom(pwr_val)
             
             # Получаем локатор и страну
             loc = normalize_locator(qso.get('gridsquare', ''))
@@ -268,14 +274,19 @@ def analyze_files(file_list, my_loc_str, output_file):
             name, max_pwr, count, odx, countries, fields, squares = item
             
             # Форматируем вывод мощности
-            if name == "QRPu":
+            if name == "ALL":
+                power_display = "все мощности"
+            elif name == "QRPu":
                 power_display = f"{max_pwr * 1000:.0f} мВт"
             elif name == "QRP-X":
                 power_display = f"{max_pwr * 1000:.0f} мВт"
             else:
                 power_display = f"{max_pwr} Ватт"
             
-            f.write(f"📡 СТАТИСТИКА ПО {name}-СВЯЗЯМ (до {power_display} включительно)\n")
+            if name == "ALL":
+                f.write(f"📡 ОБЩАЯ СТАТИСТИКА ПО ВСЕМ СВЯЗЯМ ({power_display})\n")
+            else:
+                f.write(f"📡 СТАТИСТИКА ПО {name}-СВЯЗЯМ (до {power_display} включительно)\n")
             f.write("-" * 60 + "\n")
             f.write(f"   • Количество {name}-связей: {count}\n")
             
@@ -340,7 +351,8 @@ def analyze_files(file_list, my_loc_str, output_file):
     for item in act_list:
         name, max_pwr, count, odx, countries, fields, squares = item
         if count > 0:
-            print(f"   {name}: {count} связей, {len(countries)} стран, {len(fields)} полей, {len(squares)} квадратов")
+            label = "Все связи" if name == "ALL" else name
+            print(f"   {label}: {count} связей, {len(countries)} стран, {len(fields)} полей, {len(squares)} квадратов")
             if odx[0] > 0:
                 print(f"      └─ Дальняя: {odx[0]:.1f} км")
 

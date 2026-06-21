@@ -17,9 +17,9 @@ jobs = {}
 jobs_lock = threading.Lock()
 
 
-def run_analysis(job_id, file_list, locator, output_file):
+def run_analysis(job_id, file_list, locator, output_file, power_override):
     try:
-        analyze_files(file_list, locator, output_file)
+        analyze_files(file_list, locator, output_file, power_override=power_override)
         with jobs_lock:
             jobs[job_id]['status'] = 'done'
     except Exception as e:
@@ -33,6 +33,28 @@ def index():
     return render_template('index.html')
 
 
+@app.route('/locator')
+def get_locator():
+    call = request.args.get('callsign', '').strip().upper()
+    if not call:
+        return jsonify({'error': 'Укажите позывной'}), 400
+
+    try:
+        from pyhamtools import LookupLib, Callinfo, locator as loc_mod
+        lib = LookupLib(lookuptype="countryfile")
+        cic = Callinfo(lib)
+        pos = cic.get_lat_long(call)
+        if pos and 'latitude' in pos and 'longitude' in pos:
+            loc = loc_mod.latlong_to_locator(pos["latitude"], pos["longitude"])
+            if len(loc) == 4:
+                loc = loc + "MM"
+            return jsonify({'locator': loc[:6]})
+    except Exception:
+        pass
+
+    return jsonify({'error': 'Не удалось определить локатор'}), 404
+
+
 @app.route('/analyze', methods=['POST'])
 def analyze():
     call = request.form.get('callsign', '').strip().upper()
@@ -42,6 +64,14 @@ def analyze():
         return jsonify({'error': 'Укажите позывной'}), 400
     if not locator:
         return jsonify({'error': 'Укажите локатор'}), 400
+
+    power_override = request.form.get('power_override', '').strip()
+    power_override_val = None
+    if power_override:
+        try:
+            power_override_val = float(power_override.replace(',', '.'))
+        except ValueError:
+            return jsonify({'error': 'Некорректное значение мощности'}), 400
 
     files = request.files.getlist('adif_files')
     if not files or all(f.filename == '' for f in files):
@@ -64,7 +94,7 @@ def analyze():
     with jobs_lock:
         jobs[job_id] = {'status': 'processing', 'output_file': output_file, 'error': None}
 
-    thread = threading.Thread(target=run_analysis, args=(job_id, saved_files, locator, output_file), daemon=True)
+    thread = threading.Thread(target=run_analysis, args=(job_id, saved_files, locator, output_file, power_override_val), daemon=True)
     thread.start()
 
     return jsonify({'job_id': job_id})

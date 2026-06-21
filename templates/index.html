@@ -161,6 +161,23 @@
         .power-table { width: 100%; margin-top: 1rem; font-size: 0.85rem; }
         .power-table td { padding: 0.3rem 0.5rem; border-bottom: 1px solid #1e293b; }
         .power-table td:first-child { color: #94a3b8; white-space: nowrap; }
+        .power-row { display: flex; align-items: flex-end; gap: 0.8rem; margin-bottom: 1rem; }
+        .power-row label { margin-bottom: 0; white-space: nowrap; display: flex; align-items: center; gap: 0.4rem; cursor: pointer; }
+        .power-row input[type="text"] { width: 120px; flex: none; }
+        .power-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: #2563eb; cursor: pointer; }
+        .btn-apply {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 6px;
+            background: #2563eb;
+            color: #fff;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .btn-apply:hover { background: #1d4ed8; }
+        .btn-apply:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
     </style>
 </head>
 <body>
@@ -179,6 +196,15 @@
                         <label for="locator">Локатор</label>
                         <input type="text" id="locator" name="locator" required>
                     </div>
+                </div>
+
+                <div class="power-row">
+                    <label>
+                        <input type="checkbox" id="powerOverride">
+                        Указать мощность для всех связей
+                    </label>
+                    <input type="text" id="powerValue" placeholder="Ватт" disabled>
+                    <button type="button" class="btn-apply" id="powerApply" disabled>Применить</button>
                 </div>
 
                 <label>ADIF файл(ы)</label>
@@ -221,6 +247,13 @@
         const resultEl = document.getElementById('result');
         const resultText = document.getElementById('resultText');
         const downloadBtn = document.getElementById('downloadBtn');
+        const callsignInput = document.getElementById('callsign');
+        const locatorInput = document.getElementById('locator');
+        const powerOverride = document.getElementById('powerOverride');
+        const powerValue = document.getElementById('powerValue');
+        const powerApply = document.getElementById('powerApply');
+
+        let appliedPower = '';
 
         fileZone.addEventListener('click', () => fileInput.click());
         fileZone.addEventListener('dragover', e => { e.preventDefault(); fileZone.classList.add('dragover'); });
@@ -242,6 +275,39 @@
             }
         }
 
+        callsignInput.addEventListener('blur', async () => {
+            const call = callsignInput.value.trim().toUpperCase();
+            if (!call || locatorInput.value.trim()) return;
+            try {
+                const r = await fetch('/locator?callsign=' + encodeURIComponent(call));
+                const d = await r.json();
+                if (d.locator) locatorInput.value = d.locator;
+            } catch (e) {}
+        });
+
+        powerOverride.addEventListener('change', () => {
+            const on = powerOverride.checked;
+            powerValue.disabled = !on;
+            powerApply.disabled = !on;
+            if (!on) {
+                appliedPower = '';
+                powerValue.value = '';
+            }
+        });
+
+        powerApply.addEventListener('click', () => {
+            const val = parseFloat(powerValue.value.replace(',', '.'));
+            if (isNaN(val) || val < 0) {
+                errorEl.textContent = 'Введите корректное значение мощности';
+                errorEl.classList.add('active');
+                return;
+            }
+            errorEl.classList.remove('active');
+            appliedPower = String(val);
+            powerApply.textContent = 'Применено';
+            powerApply.disabled = true;
+        });
+
         form.addEventListener('submit', async e => {
             e.preventDefault();
             errorEl.classList.remove('active');
@@ -250,8 +316,11 @@
             submitBtn.disabled = true;
 
             const fd = new FormData();
-            fd.append('callsign', document.getElementById('callsign').value);
-            fd.append('locator', document.getElementById('locator').value);
+            fd.append('callsign', callsignInput.value);
+            fd.append('locator', locatorInput.value);
+            if (appliedPower) {
+                fd.append('power_override', appliedPower);
+            }
             for (const f of fileInput.files) {
                 fd.append('adif_files', f);
             }
@@ -283,11 +352,15 @@
             } finally {
                 spinner.classList.remove('active');
                 submitBtn.disabled = false;
+                powerApply.textContent = 'Применить';
+                if (appliedPower) powerApply.disabled = true;
             }
         });
     </script>
     <footer style="text-align:center; padding:2rem 0 0; color:#475569; font-size:0.8rem;">
         Создано на основе кода, написанного Андреем UB3BBB
+        <br>
+        <a href="https://github.com/r4ncu/adif-analyzer" style="color:#475569; text-decoration:none;">https://github.com/r4ncu/adif-analyzer</a>
     </footer>
 </body>
 </html>
