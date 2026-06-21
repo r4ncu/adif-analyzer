@@ -275,16 +275,6 @@
             }
         }
 
-        callsignInput.addEventListener('blur', async () => {
-            const call = callsignInput.value.trim().toUpperCase();
-            if (!call || locatorInput.value.trim()) return;
-            try {
-                const r = await fetch('/locator?callsign=' + encodeURIComponent(call));
-                const d = await r.json();
-                if (d.locator) locatorInput.value = d.locator;
-            } catch (e) {}
-        });
-
         powerOverride.addEventListener('change', () => {
             const on = powerOverride.checked;
             powerValue.disabled = !on;

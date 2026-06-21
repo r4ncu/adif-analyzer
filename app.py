@@ -16,14 +16,6 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 jobs = {}
 jobs_lock = threading.Lock()
 
-cic = None
-try:
-    from pyhamtools import LookupLib, Callinfo, locator as loc_mod
-    lib = LookupLib(lookuptype="countryfile")
-    cic = Callinfo(lib)
-except Exception:
-    pass
-
 
 def run_analysis(job_id, file_list, locator, output_file, power_override):
     try:
@@ -39,28 +31,6 @@ def run_analysis(job_id, file_list, locator, output_file, power_override):
 @app.route('/')
 def index():
     return render_template('index.html')
-
-
-@app.route('/locator')
-def get_locator():
-    call = request.args.get('callsign', '').strip().upper()
-    if not call:
-        return jsonify({'error': 'Укажите позывной'}), 400
-
-    if not cic:
-        return jsonify({'error': 'База данных недоступна'}), 503
-
-    try:
-        pos = cic.get_lat_long(call)
-        if pos and 'latitude' in pos and 'longitude' in pos:
-            loc = loc_mod.latlong_to_locator(pos["latitude"], pos["longitude"])
-            if len(loc) == 4:
-                loc = loc + "MM"
-            return jsonify({'locator': loc[:6]})
-    except Exception:
-        pass
-
-    return jsonify({'error': 'Не удалось определить локатор'}), 404
 
 
 @app.route('/analyze', methods=['POST'])
