@@ -392,6 +392,7 @@
             const fd = new FormData();
             fd.append('callsign', callsignInput.value);
             fd.append('locator', locatorInput.value);
+            fd.append('lang', lang);
             if (appliedPower) {
                 fd.append('power_override', appliedPower);
             }

@@ -17,9 +17,9 @@ jobs = {}
 jobs_lock = threading.Lock()
 
 
-def run_analysis(job_id, file_list, locator, output_file, power_override):
+def run_analysis(job_id, file_list, locator, output_file, power_override, lang):
     try:
-        analyze_files(file_list, locator, output_file, power_override=power_override)
+        analyze_files(file_list, locator, output_file, power_override=power_override, lang=lang)
         with jobs_lock:
             jobs[job_id]['status'] = 'done'
     except Exception as e:
@@ -51,6 +51,10 @@ def analyze():
         except ValueError:
             return jsonify({'error': 'Некорректное значение мощности'}), 400
 
+    lang = request.form.get('lang', 'ru').strip()
+    if lang not in ('ru', 'en'):
+        lang = 'ru'
+
     files = request.files.getlist('adif_files')
     if not files or all(f.filename == '' for f in files):
         return jsonify({'error': 'Загрузите ADIF файл(ы)'}), 400
@@ -72,7 +76,7 @@ def analyze():
     with jobs_lock:
         jobs[job_id] = {'status': 'processing', 'output_file': output_file, 'error': None}
 
-    thread = threading.Thread(target=run_analysis, args=(job_id, saved_files, locator, output_file, power_override_val), daemon=True)
+    thread = threading.Thread(target=run_analysis, args=(job_id, saved_files, locator, output_file, power_override_val, lang), daemon=True)
     thread.start()
 
     return jsonify({'job_id': job_id})
