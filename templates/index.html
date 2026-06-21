@@ -14,12 +14,34 @@
             padding: 2rem 1rem;
         }
         .container { max-width: 800px; margin: 0 auto; }
+        .header-row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 0.3rem;
+        }
         h1 {
             text-align: center;
             font-size: 1.8rem;
-            margin-bottom: 0.3rem;
             color: #38bdf8;
         }
+        .lang-switch {
+            display: flex;
+            gap: 0.4rem;
+        }
+        .lang-btn {
+            background: none;
+            border: 2px solid transparent;
+            border-radius: 6px;
+            font-size: 1.4rem;
+            cursor: pointer;
+            padding: 0.1rem 0.3rem;
+            transition: border-color 0.2s, opacity 0.2s;
+            opacity: 0.5;
+        }
+        .lang-btn.active { border-color: #38bdf8; opacity: 1; }
+        .lang-btn:hover { opacity: 0.8; }
         .subtitle {
             text-align: center;
             color: #64748b;
@@ -158,9 +180,6 @@
             display: none;
         }
         .error.active { display: block; }
-        .power-table { width: 100%; margin-top: 1rem; font-size: 0.85rem; }
-        .power-table td { padding: 0.3rem 0.5rem; border-bottom: 1px solid #1e293b; }
-        .power-table td:first-child { color: #94a3b8; white-space: nowrap; }
         .power-row { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 1rem; }
         .power-row label { margin-bottom: 0; white-space: nowrap; display: flex; align-items: center; gap: 0.4rem; cursor: pointer; }
         .power-row input[type="text"] { width: 100px; padding: 0.55rem 0.7rem; font-size: 0.9rem; }
@@ -182,18 +201,24 @@
 </head>
 <body>
     <div class="container">
-        <h1>ADIF Analyzer</h1>
-        <p class="subtitle">Анализ ADIF файлов — статистика по странам, локаторам и мощности</p>
+        <div class="header-row">
+            <h1>ADIF Analyzer</h1>
+            <div class="lang-switch">
+                <button class="lang-btn active" id="langRu" title="Русский">🇷🇺</button>
+                <button class="lang-btn" id="langEn" title="English">🇬🇧</button>
+            </div>
+        </div>
+        <p class="subtitle" data-i18n="subtitle">Анализ ADIF файлов — статистика по странам, локаторам и мощности</p>
 
         <div class="card">
             <form id="form">
                 <div class="input-row">
                     <div>
-                        <label for="callsign">Позывной</label>
+                        <label for="callsign" data-i18n="label_callsign">Позывной</label>
                         <input type="text" id="callsign" name="callsign" required>
                     </div>
                     <div>
-                        <label for="locator">Локатор</label>
+                        <label for="locator" data-i18n="label_locator">Локатор</label>
                         <input type="text" id="locator" name="locator" required>
                     </div>
                 </div>
@@ -201,22 +226,22 @@
                 <div class="power-row">
                     <label>
                         <input type="checkbox" id="powerOverride">
-                        Указать мощность для всех связей
+                        <span data-i18n="power_override">Указать мощность для всех связей</span>
                     </label>
-                    <input type="text" id="powerValue" placeholder="Ватт" disabled>
-                    <button type="button" class="btn-apply" id="powerApply" disabled>Применить</button>
+                    <input type="text" id="powerValue" placeholder="W" disabled>
+                    <button type="button" class="btn-apply" id="powerApply" disabled data-i18n="btn_apply">Применить</button>
                 </div>
 
-                <label>ADIF файл(ы)</label>
+                <label data-i18n="label_files">ADIF файл(ы)</label>
                 <div class="file-zone" id="fileZone">
                     <div class="icon">+</div>
-                    <p>Нажмите или перетащите файлы сюда</p>
+                    <p data-i18n="file_drop">Нажмите или перетащите файлы сюда</p>
                     <input type="file" id="fileInput" name="adif_files" multiple>
                 </div>
                 <div class="file-list" id="fileList"></div>
 
                 <div style="margin-top: 1.2rem;">
-                    <button type="submit" class="btn btn-primary" id="submitBtn">АНАЛИЗ</button>
+                    <button type="submit" class="btn btn-primary" id="submitBtn" data-i18n="btn_analyze">АНАЛИЗ</button>
                 </div>
             </form>
         </div>
@@ -224,19 +249,78 @@
         <div class="error" id="error"></div>
 
         <div class="spinner" id="spinner">
-            <div class="spinner-text">Анализ файлов, подождите...</div>
+            <div class="spinner-text" data-i18n="spinner">Анализ файлов, подождите...</div>
         </div>
 
         <div id="result" class="card">
             <div class="result-header">
-                <h2>Результат анализа</h2>
-                <a class="btn-download" id="downloadBtn" href="#">Скачать TXT</a>
+                <h2 data-i18n="result_title">Результат анализа</h2>
+                <a class="btn-download" id="downloadBtn" href="#" data-i18n="btn_download">Скачать TXT</a>
             </div>
             <div class="result-text" id="resultText"></div>
         </div>
     </div>
 
     <script>
+        const I18N = {
+            ru: {
+                subtitle: 'Анализ ADIF файлов — статистика по странам, локаторам и мощности',
+                label_callsign: 'Позывной',
+                label_locator: 'Локатор',
+                power_override: 'Указать мощность для всех связей',
+                btn_apply: 'Применить',
+                btn_applied: 'Применено',
+                label_files: 'ADIF файл(ы)',
+                file_drop: 'Нажмите или перетащите файлы сюда',
+                btn_analyze: 'АНАЛИЗ',
+                spinner: 'Анализ файлов, подождите...',
+                result_title: 'Результат анализа',
+                btn_download: 'Скачать TXT',
+                err_callsign: 'Укажите позывной',
+                err_locator: 'Укажите локатор',
+                err_files: 'Загрузите ADIF файл(ы)',
+                err_power: 'Введите корректное значение мощности',
+                err_server: 'Ошибка сервера',
+                err_analysis: 'Ошибка анализа',
+            },
+            en: {
+                subtitle: 'ADIF file analysis — statistics by countries, locators and power',
+                label_callsign: 'Callsign',
+                label_locator: 'Locator',
+                power_override: 'Set power for all QSOs',
+                btn_apply: 'Apply',
+                btn_applied: 'Applied',
+                label_files: 'ADIF file(s)',
+                file_drop: 'Click or drag files here',
+                btn_analyze: 'ANALYZE',
+                spinner: 'Analyzing files, please wait...',
+                result_title: 'Analysis result',
+                btn_download: 'Download TXT',
+                err_callsign: 'Enter callsign',
+                err_locator: 'Enter locator',
+                err_files: 'Upload ADIF file(s)',
+                err_power: 'Enter a valid power value',
+                err_server: 'Server error',
+                err_analysis: 'Analysis error',
+            }
+        };
+
+        let lang = localStorage.getItem('adif_lang') || 'ru';
+
+        function t(key) { return (I18N[lang] && I18N[lang][key]) || key; }
+
+        function applyLang() {
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                el.textContent = t(el.dataset.i18n);
+            });
+            document.getElementById('langRu').classList.toggle('active', lang === 'ru');
+            document.getElementById('langEn').classList.toggle('active', lang === 'en');
+            document.documentElement.lang = lang;
+        }
+
+        document.getElementById('langRu').addEventListener('click', () => { lang = 'ru'; localStorage.setItem('adif_lang', lang); applyLang(); });
+        document.getElementById('langEn').addEventListener('click', () => { lang = 'en'; localStorage.setItem('adif_lang', lang); applyLang(); });
+
         const fileZone = document.getElementById('fileZone');
         const fileInput = document.getElementById('fileInput');
         const fileList = document.getElementById('fileList');
@@ -288,13 +372,13 @@
         powerApply.addEventListener('click', () => {
             const val = parseFloat(powerValue.value.replace(',', '.'));
             if (isNaN(val) || val < 0) {
-                errorEl.textContent = 'Введите корректное значение мощности';
+                errorEl.textContent = t('err_power');
                 errorEl.classList.add('active');
                 return;
             }
             errorEl.classList.remove('active');
             appliedPower = String(val);
-            powerApply.textContent = 'Применено';
+            powerApply.textContent = t('btn_applied');
             powerApply.disabled = true;
         });
 
@@ -319,7 +403,7 @@
                 const resp = await fetch('/analyze', { method: 'POST', body: fd });
                 const data = await resp.json();
                 if (!resp.ok) {
-                    throw new Error(data.error || 'Ошибка сервера');
+                    throw new Error(data.error || t('err_server'));
                 }
 
                 const jobId = data.job_id;
@@ -333,7 +417,7 @@
                         downloadBtn.href = '/download/' + sd.download_id;
                         break;
                     } else if (sd.status === 'error') {
-                        throw new Error(sd.error || 'Ошибка анализа');
+                        throw new Error(sd.error || t('err_analysis'));
                     }
                 }
             } catch (err) {
@@ -342,10 +426,12 @@
             } finally {
                 spinner.classList.remove('active');
                 submitBtn.disabled = false;
-                powerApply.textContent = 'Применить';
+                powerApply.textContent = t('btn_apply');
                 if (appliedPower) powerApply.disabled = true;
             }
         });
+
+        applyLang();
     </script>
     <footer style="text-align:center; padding:2rem 0 0; color:#475569; font-size:0.8rem;">
         <a href="https://github.com/r4ncu/adif-analyzer" style="color:#475569; text-decoration:none;">https://github.com/r4ncu/adif-analyzer</a>
