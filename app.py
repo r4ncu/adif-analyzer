@@ -16,6 +16,14 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 jobs = {}
 jobs_lock = threading.Lock()
 
+cic = None
+try:
+    from pyhamtools import LookupLib, Callinfo, locator as loc_mod
+    lib = LookupLib(lookuptype="countryfile")
+    cic = Callinfo(lib)
+except Exception:
+    pass
+
 
 def run_analysis(job_id, file_list, locator, output_file, power_override):
     try:
@@ -39,10 +47,10 @@ def get_locator():
     if not call:
         return jsonify({'error': 'Укажите позывной'}), 400
 
+    if not cic:
+        return jsonify({'error': 'База данных недоступна'}), 503
+
     try:
-        from pyhamtools import LookupLib, Callinfo, locator as loc_mod
-        lib = LookupLib(lookuptype="countryfile")
-        cic = Callinfo(lib)
         pos = cic.get_lat_long(call)
         if pos and 'latitude' in pos and 'longitude' in pos:
             loc = loc_mod.latlong_to_locator(pos["latitude"], pos["longitude"])
