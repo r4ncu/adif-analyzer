@@ -9,6 +9,8 @@ from main_analysis import analyze_files
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
+app.jinja_env.auto_reload = True
+app.config['TEMPLATES_AUTO_RELOAD'] = True
 
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), 'uploads')
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -19,9 +21,13 @@ jobs_lock = threading.Lock()
 
 def run_analysis(job_id, file_list, locator, output_file, power_override, lang):
     try:
-        analyze_files(file_list, locator, output_file, power_override=power_override, lang=lang)
+        result = analyze_files(file_list, locator, output_file, power_override=power_override, lang=lang, collect_map_data=True)
         with jobs_lock:
             jobs[job_id]['status'] = 'done'
+            if result:
+                jobs[job_id]['map_data'] = result[0]
+                jobs[job_id]['my_lat'] = result[1]
+                jobs[job_id]['my_lon'] = result[2]
     except Exception as e:
         with jobs_lock:
             jobs[job_id]['status'] = 'error'
@@ -106,6 +112,22 @@ def download(job_id):
     if not os.path.exists(result_file):
         return 'Файл не найден', 404
     return send_file(result_file, as_attachment=True, download_name='adif_analysis_result.txt')
+
+
+@app.route('/map/<job_id>')
+def map_data(job_id):
+    with jobs_lock:
+        job = jobs.get(job_id)
+    if not job:
+        return jsonify({'error': 'Задача не найдена'}), 404
+    if job['status'] != 'done':
+        return jsonify({'status': job['status']})
+    return jsonify({
+        'status': 'done',
+        'qsos': job.get('map_data', []),
+        'my_lat': job.get('my_lat'),
+        'my_lon': job.get('my_lon')
+    })
 
 
 if __name__ == '__main__':

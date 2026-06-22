@@ -77,7 +77,10 @@ STR = {
 def parse_power_custom(pwr_str):
     if not pwr_str:
         return 99999.0
-    pwr_str = str(pwr_str).replace(',', '.')
+    pwr_str = str(pwr_str).strip().upper().replace(',', '.')
+    text_map = {'QRP': 5.0, 'QRPP': 1.0, 'QRP-X': 0.1, 'QRPX': 0.1, 'QRP-U': 0.01, 'QRPU': 0.01}
+    if pwr_str in text_map:
+        return text_map[pwr_str]
     if pwr_str == "" or (not re.search(r'^[\d\.\s]+', pwr_str)):
         return 99999.0
     dig_sel = re.search(r'[(\d+\.?\d*)|(\.\d+)]+', pwr_str)
@@ -141,6 +144,21 @@ def get_call_info(call, cic, max_retries=3):
     return None, None
 
 
+def locator_to_latlon(loc):
+    if not loc or len(loc) < 4:
+        return None, None
+    loc = loc.upper()
+    lon = (ord(loc[0]) - 65) * 20 + (ord(loc[2]) - 48) * 2
+    lat = (ord(loc[1]) - 65) * 10 + (ord(loc[3]) - 48)
+    if len(loc) >= 6:
+        lon += (ord(loc[4]) - 65) * (2.0 / 24) + 1.0 / 24
+        lat += (ord(loc[5]) - 65) * (1.0 / 24) + 0.5 / 24
+    else:
+        lon += 1
+        lat += 0.5
+    return lat - 90, lon - 180
+
+
 def calculate_distance_approx(loc1, loc2):
     try:
         def loc_to_coords(loc):
@@ -167,10 +185,13 @@ def calculate_distance_approx(loc1, loc2):
         return 0
 
 
-def analyze_files(file_list, my_loc_str, output_file, power_override=None, lang='ru'):
+def analyze_files(file_list, my_loc_str, output_file, power_override=None, lang='ru', collect_map_data=False):
     s = STR.get(lang, STR['ru'])
 
     my_loc_str = normalize_locator(my_loc_str)
+
+    map_data = [] if collect_map_data else None
+    my_lat, my_lon = locator_to_latlon(my_loc_str) if collect_map_data else (None, None)
 
     cic = None
     try:
@@ -284,6 +305,28 @@ def analyze_files(file_list, my_loc_str, output_file, power_override=None, lang=
                     if dist > act_list[i][3][0]:
                         act_list[i][3] = [dist, full_call, pwr]
 
+            if collect_map_data and loc and len(loc) >= 4 and my_lat is not None:
+                cats = ['ALL']
+                if pwr <= 0.01:
+                    cats.append('QRPu')
+                if pwr <= 0.1:
+                    cats.append('QRP-X')
+                if pwr <= 1.0:
+                    cats.append('QRPp')
+                if pwr <= 5.0:
+                    cats.append('QRP')
+                lat, lon = locator_to_latlon(loc)
+                if lat is not None:
+                    map_data.append({
+                        'call': full_call,
+                        'lat': lat,
+                        'lon': lon,
+                        'band': band,
+                        'power': pwr,
+                        'dist': dist,
+                        'cats': cats
+                    })
+
     def fmt_pwr(val):
         if val < 0.01:
             return f"{val * 1000:.2f} {s['mw']}"
@@ -358,6 +401,9 @@ def analyze_files(file_list, my_loc_str, output_file, power_override=None, lang=
         f.write(f"\n   {s['processed_files']}:\n")
         for fname in file_list:
             f.write(f"      - {os.path.basename(fname)}\n")
+
+    if collect_map_data:
+        return map_data, my_lat, my_lon
 
 
 if __name__ == "__main__":

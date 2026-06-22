@@ -4,16 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ADIF Analyzer</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #0f172a;
+            background: #121212;
             color: #e2e8f0;
             min-height: 100vh;
-            padding: 2rem 1rem;
+            padding: 1.5rem 2rem;
         }
-        .container { max-width: 800px; margin: 0 auto; }
         .header-row {
             display: flex;
             justify-content: center;
@@ -21,195 +22,145 @@
             gap: 1rem;
             margin-bottom: 0.3rem;
         }
-        h1 {
-            text-align: center;
-            font-size: 1.8rem;
-            color: #38bdf8;
-        }
-        .lang-switch {
-            display: flex;
-            gap: 0.4rem;
-        }
+        h1 { font-size: 1.8rem; color: #38bdf8; }
+        .lang-switch { display: flex; gap: 0.4rem; }
         .lang-btn {
-            background: none;
-            border: 2px solid transparent;
-            border-radius: 6px;
-            font-size: 1.4rem;
-            cursor: pointer;
-            padding: 0.1rem 0.3rem;
-            transition: border-color 0.2s, opacity 0.2s;
-            opacity: 0.5;
+            background: none; border: 2px solid transparent; border-radius: 6px;
+            font-size: 1.4rem; cursor: pointer; padding: 0.1rem 0.3rem;
+            transition: border-color 0.2s, opacity 0.2s; opacity: 0.5;
         }
         .lang-btn.active { border-color: #38bdf8; opacity: 1; }
         .lang-btn:hover { opacity: 0.8; }
-        .subtitle {
-            text-align: center;
-            color: #64748b;
-            font-size: 0.9rem;
-            margin-bottom: 2rem;
+        .subtitle { text-align: center; color: #b3b3b3; font-size: 0.9rem; margin-bottom: 1.5rem; }
+        .top-row {
+            display: flex; gap: 1.5rem; margin-bottom: 1.5rem;
+            height: calc(100vh - 200px);
         }
+        .top-row > .card { flex: 1; min-width: 0; overflow-y: auto; }
         .card {
-            background: #1e293b;
-            border: 1px solid #334155;
-            border-radius: 12px;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
+            background: #181818; border: 1px solid #282828;
+            border-radius: 12px; padding: 1.5rem; overflow: visible;
         }
         label {
-            display: block;
-            font-weight: 600;
-            margin-bottom: 0.4rem;
-            color: #94a3b8;
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
+            display: block; font-weight: 600; margin-bottom: 0.4rem;
+            color: #b3b3b3; font-size: 0.85rem;
+            text-transform: uppercase; letter-spacing: 0.05em;
         }
         input[type="text"] {
-            width: 100%;
-            padding: 0.7rem 0.9rem;
-            border: 1px solid #334155;
-            border-radius: 8px;
-            background: #0f172a;
-            color: #e2e8f0;
-            font-size: 1rem;
-            outline: none;
-            transition: border-color 0.2s;
+            width: 100%; padding: 0.7rem 0.9rem;
+            border: 1px solid #282828; border-radius: 8px;
+            background: #121212; color: #e2e8f0; font-size: 1rem;
+            outline: none; transition: border-color 0.2s;
         }
         input[type="text"]:focus { border-color: #38bdf8; }
         .input-row { display: flex; gap: 1rem; margin-bottom: 1rem; }
         .input-row > div { flex: 1; }
         .file-zone {
-            border: 2px dashed #334155;
-            border-radius: 8px;
-            padding: 2rem;
-            text-align: center;
-            cursor: pointer;
-            transition: border-color 0.2s, background 0.2s;
-            margin-bottom: 0.5rem;
+            border: 2px dashed #282828; border-radius: 8px;
+            padding: 1rem; text-align: center; cursor: pointer;
+            transition: border-color 0.2s, background 0.2s; margin-bottom: 0.5rem;
         }
         .file-zone:hover, .file-zone.dragover {
-            border-color: #38bdf8;
-            background: rgba(56, 189, 248, 0.05);
+            border-color: #38bdf8; background: rgba(56, 189, 248, 0.05);
         }
         .file-zone input { display: none; }
         .file-zone .icon { font-size: 2rem; margin-bottom: 0.5rem; }
         .file-zone p { color: #64748b; font-size: 0.9rem; }
-        .file-list {
-            margin-top: 0.5rem;
-            font-size: 0.85rem;
-            color: #94a3b8;
+        .file-list { margin-top: 0.5rem; font-size: 0.85rem; color: #b3b3b3; }
+        .file-list span {
+            display: inline-block; background: #282828;
+            padding: 0.2rem 0.6rem; border-radius: 4px; margin: 0.2rem 0.2rem 0.2rem 0;
         }
-        .file-list span { display: inline-block; background: #334155; padding: 0.2rem 0.6rem; border-radius: 4px; margin: 0.2rem 0.2rem 0.2rem 0; }
         .btn {
-            display: block;
-            width: 100%;
-            padding: 0.85rem;
-            border: none;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 700;
-            cursor: pointer;
+            display: block; width: 100%; padding: 0.85rem; border: none;
+            border-radius: 8px; font-size: 1rem; font-weight: 700; cursor: pointer;
             transition: background 0.2s, transform 0.1s;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
+            text-transform: uppercase; letter-spacing: 0.05em;
         }
         .btn:active { transform: scale(0.98); }
         .btn-primary { background: #2563eb; color: #fff; }
         .btn-primary:hover { background: #1d4ed8; }
-        .btn-primary:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
+        .btn-primary:disabled { background: #282828; color: #64748b; cursor: not-allowed; }
         .btn-download {
-            display: inline-block;
-            margin-top: 1rem;
-            padding: 0.6rem 1.2rem;
-            background: #16a34a;
-            color: #fff;
-            border: none;
-            border-radius: 8px;
-            font-size: 0.9rem;
-            font-weight: 600;
-            cursor: pointer;
-            text-decoration: none;
+            display: inline-block; padding: 0.6rem 1.2rem;
+            background: #16a34a; color: #fff; border: none; border-radius: 8px;
+            font-size: 0.9rem; font-weight: 600; cursor: pointer; text-decoration: none;
         }
         .btn-download:hover { background: #15803d; }
-        .spinner {
-            display: none;
-            text-align: center;
-            padding: 2rem;
+        .btn-download:disabled, .btn-download.disabled {
+            background: #282828; color: #64748b; cursor: not-allowed; pointer-events: none;
         }
+        .spinner { display: none; text-align: center; padding: 2rem; }
         .spinner.active { display: block; }
         .spinner::after {
-            content: '';
-            display: inline-block;
-            width: 32px;
-            height: 32px;
-            border: 3px solid #334155;
-            border-top-color: #38bdf8;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
+            content: ''; display: inline-block; width: 32px; height: 32px;
+            border: 3px solid #282828; border-top-color: #38bdf8;
+            border-radius: 50%; animation: spin 0.8s linear infinite;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
-        .spinner-text { margin-top: 0.8rem; color: #64748b; font-size: 0.9rem; }
-        #result { display: none; }
-        #result.active { display: block; }
+        .spinner-text { margin-top: 0.8rem; color: #b3b3b3; font-size: 0.9rem; }
         .result-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
+            display: flex; justify-content: space-between;
+            align-items: center; margin-bottom: 0.5rem;
         }
-        .result-header h2 { color: #22c55e; font-size: 1.2rem; }
+        .result-header h2 { font-size: 1.2rem; color: #535353; transition: color 0.3s; }
+        .result-header h2.ready { color: #22c55e; }
         .result-text {
-            background: #0f172a;
-            border: 1px solid #334155;
-            border-radius: 8px;
-            padding: 1rem;
-            white-space: pre-wrap;
+            background: #121212; border: 1px solid #282828; border-radius: 8px;
+            padding: 1rem; white-space: pre-wrap;
             font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
-            font-size: 0.8rem;
-            line-height: 1.5;
-            max-height: 600px;
-            overflow-y: auto;
-            color: #cbd5e1;
+            font-size: 0.8rem; line-height: 1.5;
+            flex: 1; overflow-y: auto; color: #d4d4d4;
         }
         .error {
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid #ef4444;
-            color: #fca5a5;
-            padding: 0.8rem 1rem;
-            border-radius: 8px;
-            display: none;
+            background: rgba(231, 76, 60, 0.1); border: 1px solid #e74c3c;
+            color: #fca5a5; padding: 0.8rem 1rem; border-radius: 8px; display: none;
         }
         .error.active { display: block; }
         .power-row { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 1rem; }
-        .power-row label { margin-bottom: 0; white-space: nowrap; display: flex; align-items: center; gap: 0.4rem; cursor: pointer; }
+        .power-row label {
+            margin-bottom: 0; white-space: nowrap;
+            display: flex; align-items: center; gap: 0.4rem; cursor: pointer;
+        }
         .power-row input[type="text"] { width: 100px; padding: 0.55rem 0.7rem; font-size: 0.9rem; }
         .power-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: #2563eb; cursor: pointer; }
         .btn-apply {
-            padding: 0.55rem 1rem;
-            border: none;
-            border-radius: 6px;
-            background: #2563eb;
-            color: #fff;
-            font-size: 0.85rem;
-            font-weight: 600;
-            cursor: pointer;
-            white-space: nowrap;
+            padding: 0.55rem 1rem; border: none; border-radius: 6px;
+            background: #2563eb; color: #fff; font-size: 0.85rem;
+            font-weight: 600; cursor: pointer; white-space: nowrap;
         }
         .btn-apply:hover { background: #1d4ed8; }
-        .btn-apply:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
+        .btn-apply:disabled { background: #282828; color: #64748b; cursor: not-allowed; }
+        #mapSection { display: none; }
+        #mapSection.active { display: block; }
+        .leaflet-control-attribution a:first-child { display: none; }
+        #mapContainer { width: 100%; height: calc(100vh - 120px); border-radius: 8px; border: 1px solid #282828; }
+        .map-legend { display: flex; flex-wrap: wrap; gap: 1rem 1.5rem; margin-bottom: 0.8rem; justify-content: flex-start; }
+        .legend-item { display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: #b3b3b3; cursor: pointer; user-select: none; white-space: nowrap; }
+        .legend-item input[type="radio"] { width: 14px; height: 14px; accent-color: #38bdf8; cursor: pointer; flex-shrink: 0; }
+        .legend-dot { width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.2); }
+        .map-stats { margin-top: 0.6rem; font-size: 0.85rem; color: #b3b3b3; }
+        .right-card { display: flex; flex-direction: column; }
+        .right-card .result-text { flex: 1; }
+        @media (max-width: 768px) {
+            .top-row { flex-direction: column; }
+            body { padding: 1rem; }
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header-row">
-            <h1>ADIF Analyzer</h1>
-            <div class="lang-switch">
-                <button class="lang-btn active" id="langRu" title="Русский">🇷🇺</button>
-                <button class="lang-btn" id="langEn" title="English">🇬🇧</button>
-            </div>
+    <div class="header-row">
+        <h1>ADIF Analyzer</h1>
+        <div class="lang-switch">
+            <button class="lang-btn active" id="langRu" title="Русский">🇷🇺</button>
+            <button class="lang-btn" id="langEn" title="English">🇬🇧</button>
         </div>
-        <p class="subtitle" data-i18n="subtitle">Анализ ADIF файлов — статистика по странам, локаторам и мощности</p>
+    </div>
+    <p class="subtitle" data-i18n="subtitle">Анализ ADIF файлов — статистика по странам, локаторам и мощности</p>
 
+    <div class="error" id="error"></div>
+
+    <div class="top-row">
         <div class="card">
             <form id="form">
                 <div class="input-row">
@@ -240,25 +191,36 @@
                 </div>
                 <div class="file-list" id="fileList"></div>
 
+                <div class="spinner" id="spinner">
+                    <div class="spinner-text" data-i18n="spinner">Анализ файлов, подождите...</div>
+                </div>
+
                 <div style="margin-top: 1.2rem;">
                     <button type="submit" class="btn btn-primary" id="submitBtn" data-i18n="btn_analyze">АНАЛИЗ</button>
                 </div>
             </form>
         </div>
 
-        <div class="error" id="error"></div>
-
-        <div class="spinner" id="spinner">
-            <div class="spinner-text" data-i18n="spinner">Анализ файлов, подождите...</div>
-        </div>
-
-        <div id="result" class="card">
+        <div class="card right-card" id="resultPanel">
             <div class="result-header">
-                <h2 data-i18n="result_title">Результат анализа</h2>
-                <a class="btn-download" id="downloadBtn" href="#" data-i18n="btn_download">Скачать TXT</a>
+                <h2 id="resultTitle" data-i18n="result_title">Результат анализа</h2>
+                <a class="btn-download disabled" id="downloadBtn" href="#">Скачать TXT</a>
             </div>
             <div class="result-text" id="resultText"></div>
         </div>
+    </div>
+
+    <div id="mapSection" class="card">
+        <h2 style="color:#38bdf8;font-size:1.2rem;margin-bottom:0.8rem;" data-i18n="map_title">Карта связей</h2>
+        <div class="map-legend" id="mapLegend">
+            <label class="legend-item"><input type="radio" name="cat" checked data-cat="ALL"><div class="legend-dot" style="background:#3b82f6"></div><span>ALL</span></label>
+            <label class="legend-item"><input type="radio" name="cat" data-cat="QRP"><div class="legend-dot" style="background:#22c55e"></div><span>QRP (≤5W)</span></label>
+            <label class="legend-item"><input type="radio" name="cat" data-cat="QRPp"><div class="legend-dot" style="background:#f97316"></div><span>QRPp (≤1W)</span></label>
+            <label class="legend-item"><input type="radio" name="cat" data-cat="QRP-X"><div class="legend-dot" style="background:#ef4444"></div><span>QRP-X (≤100mW)</span></label>
+            <label class="legend-item"><input type="radio" name="cat" data-cat="QRPu"><div class="legend-dot" style="background:#a855f7"></div><span>QRPu (≤10mW)</span></label>
+        </div>
+        <div id="mapContainer"></div>
+        <div class="map-stats" id="mapStats"></div>
     </div>
 
     <script>
@@ -282,6 +244,8 @@
                 err_power: 'Введите корректное значение мощности',
                 err_server: 'Ошибка сервера',
                 err_analysis: 'Ошибка анализа',
+                map_title: 'Карта связей',
+                map_qso_count: 'Всего точек на карте: {count}',
             },
             en: {
                 subtitle: 'ADIF file analysis — statistics by countries, locators and power',
@@ -302,6 +266,8 @@
                 err_power: 'Enter a valid power value',
                 err_server: 'Server error',
                 err_analysis: 'Analysis error',
+                map_title: 'Contact Map',
+                map_qso_count: 'Total points on map: {count}',
             }
         };
 
@@ -328,9 +294,9 @@
         const submitBtn = document.getElementById('submitBtn');
         const spinner = document.getElementById('spinner');
         const errorEl = document.getElementById('error');
-        const resultEl = document.getElementById('result');
         const resultText = document.getElementById('resultText');
         const downloadBtn = document.getElementById('downloadBtn');
+        const resultTitle = document.getElementById('resultTitle');
         const callsignInput = document.getElementById('callsign');
         const locatorInput = document.getElementById('locator');
         const powerOverride = document.getElementById('powerOverride');
@@ -385,7 +351,6 @@
         form.addEventListener('submit', async e => {
             e.preventDefault();
             errorEl.classList.remove('active');
-            resultEl.classList.remove('active');
             spinner.classList.add('active');
             submitBtn.disabled = true;
 
@@ -414,8 +379,31 @@
                     const sd = await sr.json();
                     if (sd.status === 'done') {
                         resultText.textContent = sd.result;
-                        resultEl.classList.add('active');
+                        resultTitle.classList.add('ready');
+                        downloadBtn.classList.remove('disabled');
                         downloadBtn.href = '/download/' + sd.download_id;
+
+                        try {
+                            const mapResp = await fetch('/map/' + jobId);
+                            const mapData = await mapResp.json();
+                            if (mapData.status === 'done' && mapData.qsos && mapData.qsos.length > 0) {
+                                document.getElementById('mapSection').classList.add('active');
+                                setTimeout(() => {
+                                    try {
+                                        initMap();
+                                        renderMap(mapData);
+                                        map.invalidateSize();
+                                        if (mapData.qsos.length > 0) {
+                                            const allPts = mapData.qsos.map(q => [q.lat, q.lon]);
+                                            if (mapData.my_lat != null) allPts.push([mapData.my_lat, mapData.my_lon]);
+                                            const bounds = L.latLngBounds(allPts);
+                                            map.fitBounds(bounds, {padding: [20, 20], maxZoom: 12});
+                                        }
+                                    } catch(err) { console.error('MAP ERROR', err); }
+                                }, 300);
+                            }
+                        } catch (e) {}
+
                         break;
                     } else if (sd.status === 'error') {
                         throw new Error(sd.error || t('err_analysis'));
@@ -433,9 +421,120 @@
         });
 
         applyLang();
+
+        const CAT_COLORS = {
+            'ALL': '#3b82f6',
+            'QRP': '#22c55e',
+            'QRPp': '#f97316',
+            'QRP-X': '#ef4444',
+            'QRPu': '#a855f7'
+        };
+
+        let map = null;
+        let mapLayers = {};
+        let catBounds = {};
+
+        function initMap() {
+            if (map) { map.remove(); map = null; }
+            map = L.map('mapContainer').setView([40, 0], 2);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/spotify_dark/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; OpenStreetMap &copy; CARTO',
+                maxZoom: 18
+            }).addTo(map);
+        }
+
+        function renderMap(data) {
+            initMap();
+            map.invalidateSize();
+            Object.values(mapLayers).forEach(layer => map.removeLayer(layer));
+            mapLayers = {};
+            catBounds = {};
+
+            const myLat = data.my_lat;
+            const myLon = data.my_lon;
+
+            if (myLat != null && myLon != null) {
+                const myIcon = L.divIcon({
+                    className: '',
+                    html: '<div style="width:14px;height:14px;background:#facc15;border:2px solid #fff;border-radius:50%;box-shadow:0 0 6px rgba(0,0,0,0.5);"></div>',
+                    iconSize: [14, 14],
+                    iconAnchor: [7, 7]
+                });
+                L.marker([myLat, myLon], {icon: myIcon, zIndexOffset: 1000})
+                    .addTo(map)
+                    .bindPopup('<b>Вы</b>');
+            }
+
+            const groups = {};
+            data.qsos.forEach(qso => {
+                const cats = qso.cats || ['ALL'];
+                cats.forEach(cat => {
+                    if (!groups[cat]) groups[cat] = [];
+                    groups[cat].push(qso);
+                });
+            });
+
+            Object.entries(groups).forEach(([cat, qsos]) => {
+                const color = CAT_COLORS[cat] || '#3b82f6';
+                const layer = L.layerGroup();
+
+                const points = [];
+                qsos.forEach(qso => {
+                    points.push([qso.lat, qso.lon]);
+                    const icon = L.divIcon({
+                        className: '',
+                        html: `<div style="width:7px;height:7px;background:${color};border:1px solid rgba(255,255,255,0.4);border-radius:50%;opacity:0.8;"></div>`,
+                        iconSize: [7, 7],
+                        iconAnchor: [3.5, 3.5]
+                    });
+                    L.marker([qso.lat, qso.lon], {icon})
+                        .bindPopup(`<b>${qso.call}</b><br>${qso.band}${qso.power < 99999 ? ' | ' + (qso.power < 0.1 ? qso.power.toFixed(3) : qso.power.toFixed(1)) + 'W' : ''}<br>${Math.round(qso.dist)} km`)
+                        .addTo(layer);
+                });
+
+                if (myLat != null && myLon != null && points.length > 0) {
+                    points.forEach(p => {
+                        L.polyline([[myLat, myLon], p], {
+                            color: color,
+                            weight: 0.5,
+                            opacity: 0.3
+                        }).addTo(layer);
+                    });
+                }
+
+                layer.addTo(map);
+                mapLayers[cat] = layer;
+
+                if (points.length > 0) {
+                    const allPts = points.slice();
+                    if (myLat != null) allPts.push([myLat, myLon]);
+                    catBounds[cat] = L.latLngBounds(allPts);
+                }
+            });
+
+            const activeCat = document.querySelector('#mapLegend input[data-cat]:checked');
+            const showCat = activeCat ? activeCat.dataset.cat : 'ALL';
+            Object.entries(mapLayers).forEach(([c, l]) => {
+                if (c === showCat) l.addTo(map); else map.removeLayer(l);
+            });
+
+            const total = data.qsos.length;
+            document.getElementById('mapStats').textContent = t('map_qso_count').replace('{count}', total);
+        }
+
+        document.getElementById('mapLegend').addEventListener('change', e => {
+            if (!e.target.matches('input[data-cat]')) return;
+            const cat = e.target.dataset.cat;
+            Object.entries(mapLayers).forEach(([c, l]) => {
+                if (c === cat) l.addTo(map); else map.removeLayer(l);
+            });
+            if (catBounds[cat]) {
+                map.fitBounds(catBounds[cat], {padding: [20, 20], maxZoom: 12});
+            }
+        });
     </script>
-    <footer style="text-align:center; padding:2rem 0 0; color:#475569; font-size:0.8rem;">
-        <a href="https://github.com/r4ncu/adif-analyzer" style="color:#475569; text-decoration:none;">https://github.com/r4ncu/adif-analyzer</a>
+    <footer style="text-align:center; padding:2rem 0 0; color:#535353; font-size:0.8rem;">
+        <a href="https://github.com/r4ncu/adif-analyzer" style="color:#535353; text-decoration:none;">https://github.com/r4ncu/adif-analyzer</a>
     </footer>
 </body>
 </html>
