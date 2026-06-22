@@ -1,71 +1,123 @@
-# ADIF Analyzer
+# ADIF Analyzer — QRP-Stat
 
-Web application for analyzing amateur radio ADIF logs and generating statistics by countries, locators, and power.
+Web application for analyzing ADIF files (Amateur Data Interchange Format) with contact visualization on an interactive map.
 
-**Link:** [ADIF Analyzer](https://adif-analyzer.onrender.com)
+Analysis results are oriented toward the [Club 72](http://club-72.ru/#qrp) activity tables.
 
-## Purpose
+## Features
 
-The program is designed to analyze ADIF files (standard radio communication log format) and output detailed statistics. Results are oriented toward the [Club 72](http://club-72.ru/#qrp) activity tables — a community of low-power (QRP) amateur radio operators.
+### ADIF File Analysis
 
-## Requirements
-
-1. **ADIF file (.adi)** — a radio contact log exported from ANYLOG, UR5EQF_log, N1MM, Log4OM, MacLogger DX, or any other logging software.
-2. **Callsign** — your callsign (e.g., R4NCU).
-3. **Locator** — your Maidenhead locator, 4–6 characters (e.g., LO48VI). Entered manually.
-
-## Parameters
-
-| Parameter | Required | Description |
-|-----------|----------|-------------|
-| Callsign | Required | Your callsign |
-| Locator | Required | Your Maidenhead locator (4 or 6 characters) |
-| ADIF file(s) | Required | One or more .adi files |
-| Power for all QSOs | Optional | Checkbox + input field. When enabled, the specified power is applied to **all** QSOs in the log instead of the TX_PWR field value |
-
-## Results
-
-### Overall statistics for all QSOs
-Number of worked countries (WKD countries), fields (WKD fields), and squares (WKD squares) across **all** QSOs regardless of power.
-
-### Statistics by power category
-
-| Category | Maximum power |
-|----------|---------------|
-| QRP | up to 5 W |
-| QRPp | up to 1 W |
-| QRP-X | up to 0.1 W (100 mW) |
-| QRPu | up to 0.01 W (10 mW) |
-
-For each category:
-- Number of QSOs
-- Countries, fields, and squares (WKD)
-- Longest contact (ODX) with distance and power
-
-### Additional
+- Statistics by countries (WKD countries), fields (WKD fields), and squares (WKD squares)
+- Power categories:
+  - **ALL** — all contacts
+  - **QRP** — up to 5W
+  - **QRPp** — up to 1W
+  - **QRP-X** — up to 0.1W (100mW)
+  - **QRPu** — up to 0.01W (10mW)
+- Text power values: `QRP` → 5W, `QRPp` → 1W, `QRP-X` → 0.1W, `QRPu` → 0.01W
+- Band statistics (160M–2M, 70CM) with ODX (longest contact)
 - Top-20 most frequent callsigns
-- Band statistics (160M–2M) with ODX
-- Total unique callsigns
-- Average QSOs per callsign
+- Locator and country lookup via QRZ.com (pyhamtools)
+- Correct prefix handling (e.g., LA/KK6IK → QTH for Norway)
+- Distance calculation via Maidenhead locators (pyhamtools + Haversine fallback)
 
-## Language
+### Contact Map
 
-The interface and results are available in **Russian** and **English**. Switch using flag buttons 🇷🇺 / 🇬🇧. The selection persists between sessions.
+- Interactive map using **Leaflet.js** with **CartoDB Spotify Dark** tiles
+- Color differentiation by power category:
+  - ALL — blue
+  - QRP — green
+  - QRPp — orange
+  - QRP-X — red
+  - QRPu — purple
+- Radio buttons for category switching
+- Contact lines from operator to each contact
+- Auto-zoom on load and category switch
+- Yellow marker for operator position
+- Popups: callsign, band, power, distance
+- Canvas renderer for performance
 
-## Technical Details
+### Large File Optimization
 
-- **Backend:** Python + Flask + `adif_io` (ADIF parsing) + `pyhamtools` (callsign lookup from cqdx database)
-- **Frontend:** HTML/CSS/JS with async polling
-- **Deployment:** GitHub → Render.com, auto-deploy on push to `main`
-- **Limitations:** Analysis of 44,000 QSOs takes ~30 seconds. Background processing with status polling every 2 seconds.
+- Files **<10,000 QSO**: each QSO as individual marker, lines up to 2,000 points
+- Files **≥10,000 QSO**: deduplication by locator coordinates, popup shows QSO count, marker size proportional (log scale, 7–16px)
 
-## Usage from Command Line
+### Analysis Progress
+
+- Displays "Processed X of Y QSO" in real time
+- Update interval: 1 second
+
+### Interface
+
+- Two-column layout: form on the left, results on the right
+- Results stretch to full height of right panel
+- Fluid page, responsive design (<768px: single column)
+- "Analyze" button disabled until file is loaded
+- "Download TXT" button disabled until analysis completes
+- "Hide contact map" checkbox to skip map data collection
+- Multilingual: RU/EN interface, RU/EN statistics
+
+## Running
 
 ```bash
-python main_analysis.py log.adi LO48VI
-python main_analysis.py /path/to/folder/ LO48VI
+pip install -r requirements.txt
+python3 app.py
+```
+
+Server available at http://localhost:5000
+
+### CLI Mode
+
+```bash
+python3 main_analysis.py <file.adif> [locator]
+python3 main_analysis.py <folder>/ [locator]
+```
+
+## API
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/` | Main page |
+| POST | `/analyze` | Upload files and start analysis |
+| GET | `/status/<job_id>` | Task status and result |
+| GET | `/download/<job_id>` | Download TXT |
+| GET | `/map/<job_id>` | Map data (JSON) |
+
+## Technologies
+
+- **Backend**: Python 3, Flask, adif_io, pyhamtools
+- **Frontend**: Vanilla JS, Leaflet.js, CartoDB Spotify Dark tiles
+- **Deployment**: Render.com (gunicorn)
+
+## Dependencies
+
+```
+flask==3.1.3
+adif_io==0.6.1
+pyhamtools==0.12.0
+requests==2.33.1
+gunicorn==23.0.0
+```
+
+## Structure
+
+```
+├── app.py              # Flask server (API + request handling)
+├── main_analysis.py    # ADIF file analysis engine
+├── templates/
+│   └── index.html      # Frontend (HTML + CSS + JS)
+├── uploads/            # Temporary files (results)
+├── requirements.txt    # Dependencies
+├── render.yaml         # Deployment config
+└── Procfile            # Gunicorn config
 ```
 
 ## Authors
 
-Original code — Andrey UB3BBB. Enhancement — AI + human.
+Original code: **Andrey UB3BBB (R4NCU)**
+Enhanced with AI assistance (Manus & DeepSeek)
+Contact: andrey.R4NCU@gmail.com
+Repository: https://github.com/r4ncu/adif-analyzer
+
+License: AS IS

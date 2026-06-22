@@ -19,9 +19,14 @@ jobs = {}
 jobs_lock = threading.Lock()
 
 
-def run_analysis(job_id, file_list, locator, output_file, power_override, lang):
+def run_analysis(job_id, file_list, locator, output_file, power_override, lang, skip_map=False):
     try:
-        result = analyze_files(file_list, locator, output_file, power_override=power_override, lang=lang, collect_map_data=True)
+        def progress_cb(processed, total):
+            with jobs_lock:
+                jobs[job_id]['processed'] = processed
+                jobs[job_id]['total'] = total
+
+        result = analyze_files(file_list, locator, output_file, power_override=power_override, lang=lang, collect_map_data=not skip_map, progress_cb=progress_cb)
         with jobs_lock:
             jobs[job_id]['status'] = 'done'
             if result:
@@ -82,10 +87,12 @@ def analyze():
     with jobs_lock:
         jobs[job_id] = {'status': 'processing', 'output_file': output_file, 'error': None}
 
-    thread = threading.Thread(target=run_analysis, args=(job_id, saved_files, locator, output_file, power_override_val, lang), daemon=True)
+    skip_map = request.form.get('skip_map', '0') == '1'
+
+    thread = threading.Thread(target=run_analysis, args=(job_id, saved_files, locator, output_file, power_override_val, lang), kwargs={'skip_map': skip_map}, daemon=True)
     thread.start()
 
-    return jsonify({'job_id': job_id})
+    return jsonify({'job_id': job_id, 'skip_map': skip_map})
 
 
 @app.route('/status/<job_id>')
@@ -97,7 +104,7 @@ def status(job_id):
         return jsonify({'error': 'Задача не найдена'}), 404
 
     if job['status'] == 'processing':
-        return jsonify({'status': 'processing'})
+        return jsonify({'status': 'processing', 'processed': job.get('processed', 0), 'total': job.get('total', 0)})
     elif job['status'] == 'error':
         return jsonify({'status': 'error', 'error': job['error']})
     else:

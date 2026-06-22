@@ -36,7 +36,7 @@
             display: flex; gap: 1.5rem; margin-bottom: 1.5rem;
             height: calc(100vh - 200px);
         }
-        .top-row > .card { flex: 1; min-width: 0; overflow-y: auto; }
+        .top-row > .card { flex: 1; min-width: 0; overflow-y: visible; }
         .card {
             background: #181818; border: 1px solid #282828;
             border-radius: 12px; padding: 1.5rem; overflow: visible;
@@ -143,7 +143,7 @@
         .right-card { display: flex; flex-direction: column; }
         .right-card .result-text { flex: 1; }
         @media (max-width: 768px) {
-            .top-row { flex-direction: column; }
+            .top-row { flex-direction: column; height: auto; }
             body { padding: 1rem; }
         }
     </style>
@@ -183,6 +183,13 @@
                     <button type="button" class="btn-apply" id="powerApply" disabled data-i18n="btn_apply">Применить</button>
                 </div>
 
+                <div class="power-row">
+                    <label>
+                        <input type="checkbox" id="skipMap">
+                        <span data-i18n="skip_map">Не показывать карту связей</span>
+                    </label>
+                </div>
+
                 <label data-i18n="label_files">ADIF файл(ы)</label>
                 <div class="file-zone" id="fileZone">
                     <div class="icon">+</div>
@@ -193,10 +200,11 @@
 
                 <div class="spinner" id="spinner">
                     <div class="spinner-text" data-i18n="spinner">Анализ файлов, подождите...</div>
+                    <div class="spinner-text" id="progressText" style="margin-top:0.4rem;"></div>
                 </div>
 
                 <div style="margin-top: 1.2rem;">
-                    <button type="submit" class="btn btn-primary" id="submitBtn" data-i18n="btn_analyze">АНАЛИЗ</button>
+                    <button type="submit" class="btn btn-primary" id="submitBtn" disabled data-i18n="btn_analyze">АНАЛИЗ</button>
                 </div>
             </form>
         </div>
@@ -204,7 +212,7 @@
         <div class="card right-card" id="resultPanel">
             <div class="result-header">
                 <h2 id="resultTitle" data-i18n="result_title">Результат анализа</h2>
-                <a class="btn-download disabled" id="downloadBtn" href="#">Скачать TXT</a>
+                <a class="btn-download disabled" id="downloadBtn" href="#" data-i18n="btn_download">Скачать TXT</a>
             </div>
             <div class="result-text" id="resultText"></div>
         </div>
@@ -244,6 +252,7 @@
                 err_power: 'Введите корректное значение мощности',
                 err_server: 'Ошибка сервера',
                 err_analysis: 'Ошибка анализа',
+                skip_map: 'Не показывать карту связей',
                 map_title: 'Карта связей',
                 map_qso_count: 'Всего точек на карте: {count}',
             },
@@ -266,6 +275,7 @@
                 err_power: 'Enter a valid power value',
                 err_server: 'Server error',
                 err_analysis: 'Analysis error',
+                skip_map: 'Hide contact map',
                 map_title: 'Contact Map',
                 map_qso_count: 'Total points on map: {count}',
             }
@@ -314,7 +324,10 @@
             fileInput.files = e.dataTransfer.files;
             showFiles(fileInput.files);
         });
-        fileInput.addEventListener('change', () => showFiles(fileInput.files));
+        fileInput.addEventListener('change', () => {
+            showFiles(fileInput.files);
+            submitBtn.disabled = fileInput.files.length === 0;
+        });
 
         function showFiles(files) {
             fileList.innerHTML = '';
@@ -358,6 +371,7 @@
             fd.append('callsign', callsignInput.value);
             fd.append('locator', locatorInput.value);
             fd.append('lang', lang);
+            fd.append('skip_map', document.getElementById('skipMap').checked ? '1' : '0');
             if (appliedPower) {
                 fd.append('power_override', appliedPower);
             }
@@ -374,33 +388,40 @@
 
                 const jobId = data.job_id;
                 while (true) {
-                    await new Promise(r => setTimeout(r, 2000));
+                    await new Promise(r => setTimeout(r, 1000));
                     const sr = await fetch('/status/' + jobId);
                     const sd = await sr.json();
-                    if (sd.status === 'done') {
+                    if (sd.status === 'processing') {
+                        if (sd.total > 0) {
+                            document.getElementById('progressText').textContent = 'Обработано ' + sd.processed + ' из ' + sd.total + ' QSO';
+                        }
+                        continue;
+                    } else if (sd.status === 'done') {
                         resultText.textContent = sd.result;
                         resultTitle.classList.add('ready');
                         downloadBtn.classList.remove('disabled');
                         downloadBtn.href = '/download/' + sd.download_id;
 
                         try {
-                            const mapResp = await fetch('/map/' + jobId);
-                            const mapData = await mapResp.json();
-                            if (mapData.status === 'done' && mapData.qsos && mapData.qsos.length > 0) {
-                                document.getElementById('mapSection').classList.add('active');
-                                setTimeout(() => {
-                                    try {
-                                        initMap();
-                                        renderMap(mapData);
-                                        map.invalidateSize();
-                                        if (mapData.qsos.length > 0) {
-                                            const allPts = mapData.qsos.map(q => [q.lat, q.lon]);
-                                            if (mapData.my_lat != null) allPts.push([mapData.my_lat, mapData.my_lon]);
-                                            const bounds = L.latLngBounds(allPts);
-                                            map.fitBounds(bounds, {padding: [20, 20], maxZoom: 12});
-                                        }
-                                    } catch(err) { console.error('MAP ERROR', err); }
-                                }, 300);
+                            if (!document.getElementById('skipMap').checked) {
+                                const mapResp = await fetch('/map/' + jobId);
+                                const mapData = await mapResp.json();
+                                if (mapData.status === 'done' && mapData.qsos && mapData.qsos.length > 0) {
+                                    document.getElementById('mapSection').classList.add('active');
+                                    setTimeout(() => {
+                                        try {
+                                            initMap();
+                                            renderMap(mapData);
+                                            map.invalidateSize();
+                                            if (mapData.qsos.length > 0) {
+                                                const allPts = mapData.qsos.map(q => [q.lat, q.lon]);
+                                                if (mapData.my_lat != null) allPts.push([mapData.my_lat, mapData.my_lon]);
+                                                const bounds = L.latLngBounds(allPts);
+                                                map.fitBounds(bounds, {padding: [20, 20], maxZoom: 12});
+                                            }
+                                        } catch(err) { console.error('MAP ERROR', err); }
+                                    }, 300);
+                                }
                             }
                         } catch (e) {}
 
@@ -414,7 +435,8 @@
                 errorEl.classList.add('active');
             } finally {
                 spinner.classList.remove('active');
-                submitBtn.disabled = false;
+                document.getElementById('progressText').textContent = '';
+                submitBtn.disabled = fileInput.files.length === 0;
                 powerApply.textContent = t('btn_apply');
                 if (appliedPower) powerApply.disabled = true;
             }
@@ -436,7 +458,7 @@
 
         function initMap() {
             if (map) { map.remove(); map = null; }
-            map = L.map('mapContainer').setView([40, 0], 2);
+            map = L.map('mapContainer', {preferCanvas: true}).setView([40, 0], 2);
             L.tileLayer('https://{s}.basemaps.cartocdn.com/spotify_dark/{z}/{x}/{y}{r}.png', {
                 attribution: '&copy; OpenStreetMap &copy; CARTO',
                 maxZoom: 18
@@ -481,18 +503,30 @@
                 const points = [];
                 qsos.forEach(qso => {
                     points.push([qso.lat, qso.lon]);
+                    const count = qso.count || 1;
+                    const size = count > 1 ? Math.min(7 + Math.log2(count) * 2, 16) : 7;
                     const icon = L.divIcon({
                         className: '',
-                        html: `<div style="width:7px;height:7px;background:${color};border:1px solid rgba(255,255,255,0.4);border-radius:50%;opacity:0.8;"></div>`,
-                        iconSize: [7, 7],
-                        iconAnchor: [3.5, 3.5]
+                        html: `<div style="width:${size}px;height:${size}px;background:${color};border:1px solid rgba(255,255,255,0.4);border-radius:50%;opacity:0.8;"></div>`,
+                        iconSize: [size, size],
+                        iconAnchor: [size/2, size/2]
                     });
+                    let popupHtml;
+                    if (count > 1) {
+                        const bandStr = (qso.bands || []).join(', ');
+                        const pwrVal = qso.odx_power;
+                        const pwrStr = pwrVal < 99999 ? (pwrVal < 0.1 ? pwrVal.toFixed(3) : pwrVal.toFixed(1)) + 'W' : '';
+                        popupHtml = `<b>${count} QSO</b><br>${bandStr}${pwrStr ? ' | ' + pwrStr : ''}<br>${Math.round(qso.dist)} km`;
+                    } else {
+                        const pwr = qso.power;
+                        popupHtml = `<b>${qso.call}</b><br>${qso.band}${pwr < 99999 ? ' | ' + (pwr < 0.1 ? pwr.toFixed(3) : pwr.toFixed(1)) + 'W' : ''}<br>${Math.round(qso.dist)} km`;
+                    }
                     L.marker([qso.lat, qso.lon], {icon})
-                        .bindPopup(`<b>${qso.call}</b><br>${qso.band}${qso.power < 99999 ? ' | ' + (qso.power < 0.1 ? qso.power.toFixed(3) : qso.power.toFixed(1)) + 'W' : ''}<br>${Math.round(qso.dist)} km`)
+                        .bindPopup(popupHtml)
                         .addTo(layer);
                 });
 
-                if (myLat != null && myLon != null && points.length > 0) {
+                if (myLat != null && myLon != null && points.length > 0 && points.length <= 2000) {
                     points.forEach(p => {
                         L.polyline([[myLat, myLon], p], {
                             color: color,

@@ -101,6 +101,19 @@ def get_base_call(call):
     return max(parts, key=len)
 
 
+def get_prefix_call(call):
+    if not call:
+        return call, None
+    call = call.upper()
+    parts = call.split('/')
+    if len(parts) == 2:
+        prefix_part = parts[0] if len(parts[0]) <= 3 else parts[1]
+        base_part = parts[1] if len(parts[0]) <= 3 else parts[0]
+        if len(prefix_part) >= 1 and prefix_part[0].isalpha():
+            return base_part, prefix_part
+    return call, None
+
+
 def normalize_locator(loc):
     if not loc:
         return ""
@@ -185,7 +198,7 @@ def calculate_distance_approx(loc1, loc2):
         return 0
 
 
-def analyze_files(file_list, my_loc_str, output_file, power_override=None, lang='ru', collect_map_data=False):
+def analyze_files(file_list, my_loc_str, output_file, power_override=None, lang='ru', collect_map_data=False, progress_cb=None):
     s = STR.get(lang, STR['ru'])
 
     my_loc_str = normalize_locator(my_loc_str)
@@ -215,117 +228,128 @@ def analyze_files(file_list, my_loc_str, output_file, power_override=None, lang=
     call_cache = {}
     total_qsos = 0
 
+    all_qsos = []
     for adif_file in file_list:
         try:
             with open(adif_file, 'r', encoding='utf-8', errors='ignore') as f:
                 content = f.read()
             qsos, header = adif_io.read_from_string(content)
+            all_qsos.extend(qsos)
         except Exception:
             continue
 
-        for qso in qsos:
-            total_qsos += 1
+    total_to_process = len(all_qsos)
+    processed = 0
 
-            full_call = qso.get('call', '').upper()
-            if not full_call:
-                continue
+    for qso in all_qsos:
+        total_qsos += 1
+        processed += 1
 
-            base_call = get_base_call(full_call)
-            all_calls.append(base_call)
+        full_call = qso.get('call', '').upper()
+        if not full_call:
+            continue
 
-            band = qso.get('band', '').upper()
-            if not band:
-                freq = qso.get('freq', '')
-                if freq:
-                    try:
-                        freq_mhz = float(freq)
-                        if freq_mhz < 2: band = '160M'
-                        elif freq_mhz < 4: band = '80M'
-                        elif freq_mhz < 8: band = '40M'
-                        elif freq_mhz < 15: band = '30M'
-                        elif freq_mhz < 22: band = '20M'
-                        elif freq_mhz < 25: band = '17M'
-                        elif freq_mhz < 28: band = '15M'
-                        elif freq_mhz < 30: band = '12M'
-                        elif freq_mhz < 55: band = '10M'
-                        else: band = '2M'
-                    except:
-                        band = 'Unknown'
-                else:
-                    band = 'Unknown'
+        base_call = get_base_call(full_call)
+        _, prefix = get_prefix_call(full_call)
+        lookup_call = prefix if prefix else base_call
+        all_calls.append(base_call)
 
-            bands_count[band] += 1
-
-            if power_override is not None:
-                pwr = power_override
-            else:
-                pwr_val = qso.get('tx_pwr') or qso.get('power') or qso.get('app_rumlog_power')
-                pwr = parse_power_custom(pwr_val)
-
-            loc = normalize_locator(qso.get('gridsquare', ''))
-            country = qso.get('country', '') or qso.get('dxcc', '')
-
-            if (not loc or not country) and cic:
-                if base_call in call_cache:
-                    cached_loc, cached_country = call_cache[base_call]
-                    if not loc and cached_loc:
-                        loc = cached_loc
-                    if not country and cached_country:
-                        country = cached_country
-                else:
-                    new_loc, new_country = get_call_info(base_call, cic)
-                    call_cache[base_call] = (new_loc, new_country)
-                    if not loc and new_loc:
-                        loc = new_loc
-                    if not country and new_country:
-                        country = new_country
-
-            dist = 0.0
-            if loc and my_loc_str and len(loc) >= 4 and len(my_loc_str) >= 4:
+        band = qso.get('band', '').upper()
+        if not band:
+            freq = qso.get('freq', '')
+            if freq:
                 try:
-                    dist = float(locator.calculate_distance(my_loc_str, loc))
+                    freq_mhz = float(freq)
+                    if freq_mhz < 2: band = '160M'
+                    elif freq_mhz < 4: band = '80M'
+                    elif freq_mhz < 8: band = '40M'
+                    elif freq_mhz < 15: band = '30M'
+                    elif freq_mhz < 22: band = '20M'
+                    elif freq_mhz < 25: band = '17M'
+                    elif freq_mhz < 28: band = '15M'
+                    elif freq_mhz < 30: band = '12M'
+                    elif freq_mhz < 55: band = '10M'
+                    else: band = '2M'
                 except:
-                    try:
-                        dist = calculate_distance_approx(my_loc_str, loc)
-                    except:
-                        dist = 0.0
+                    band = 'Unknown'
+            else:
+                band = 'Unknown'
 
-            if dist > bands_odx[band][0]:
-                bands_odx[band] = [dist, full_call]
+        bands_count[band] += 1
 
-            for i in range(len(act_list)):
-                if pwr <= act_list[i][1]:
-                    act_list[i][2] += 1
-                    if country:
-                        act_list[i][4].add(str(country).upper())
-                    if loc and len(loc) >= 2:
-                        act_list[i][5].add(loc[:2])
-                    if loc and len(loc) >= 4:
-                        act_list[i][6].add(loc[:4])
-                    if dist > act_list[i][3][0]:
-                        act_list[i][3] = [dist, full_call, pwr]
+        if power_override is not None:
+            pwr = power_override
+        else:
+            pwr_val = qso.get('tx_pwr') or qso.get('power') or qso.get('app_rumlog_power')
+            pwr = parse_power_custom(pwr_val)
 
-            if collect_map_data and loc and len(loc) >= 4 and my_lat is not None:
-                cats = ['ALL']
-                if pwr <= 0.01:
-                    cats.append('QRPu')
-                if pwr <= 0.1:
-                    cats.append('QRP-X')
-                if pwr <= 1.0:
-                    cats.append('QRPp')
-                if pwr <= 5.0:
-                    cats.append('QRP')
-                lat, lon = locator_to_latlon(loc)
-                if lat is not None:
-                    map_data.append({
-                        'call': full_call,
-                        'lat': lat,
-                        'lon': lon,
-                        'band': band,
-                        'power': pwr,
-                        'dist': dist,
-                        'cats': cats
-                    })
+        loc = normalize_locator(qso.get('gridsquare', ''))
+        country = qso.get('country', '') or qso.get('dxcc', '')
+
+        if (not loc or not country) and cic:
+            if lookup_call in call_cache:
+                cached_loc, cached_country = call_cache[lookup_call]
+                if not loc and cached_loc:
+                    loc = cached_loc
+                if not country and cached_country:
+                    country = cached_country
+            else:
+                new_loc, new_country = get_call_info(lookup_call, cic)
+                call_cache[lookup_call] = (new_loc, new_country)
+                if not loc and new_loc:
+                    loc = new_loc
+                if not country and new_country:
+                    country = new_country
+
+        if progress_cb and processed % 100 == 0:
+            progress_cb(processed, total_to_process)
+
+        dist = 0.0
+        if loc and my_loc_str and len(loc) >= 4 and len(my_loc_str) >= 4:
+            try:
+                dist = float(locator.calculate_distance(my_loc_str, loc))
+            except:
+                try:
+                    dist = calculate_distance_approx(my_loc_str, loc)
+                except:
+                    dist = 0.0
+
+        if dist > bands_odx[band][0]:
+            bands_odx[band] = [dist, full_call]
+
+        for i in range(len(act_list)):
+            if pwr <= act_list[i][1]:
+                act_list[i][2] += 1
+                if country:
+                    act_list[i][4].add(str(country).upper())
+                if loc and len(loc) >= 2:
+                    act_list[i][5].add(loc[:2])
+                if loc and len(loc) >= 4:
+                    act_list[i][6].add(loc[:4])
+                if dist > act_list[i][3][0]:
+                    act_list[i][3] = [dist, full_call, pwr]
+
+        if collect_map_data and loc and len(loc) >= 4 and my_lat is not None:
+            cats = ['ALL']
+            if pwr <= 0.01:
+                cats.append('QRPu')
+            if pwr <= 0.1:
+                cats.append('QRP-X')
+            if pwr <= 1.0:
+                cats.append('QRPp')
+            if pwr <= 5.0:
+                cats.append('QRP')
+            lat, lon = locator_to_latlon(loc)
+            if lat is not None:
+                map_data.append({
+                    'call': full_call,
+                    'lat': lat,
+                    'lon': lon,
+                    'band': band,
+                    'power': pwr,
+                    'dist': dist,
+                    'cats': cats
+                })
 
     def fmt_pwr(val):
         if val < 0.01:
@@ -403,6 +427,30 @@ def analyze_files(file_list, my_loc_str, output_file, power_override=None, lang=
             f.write(f"      - {os.path.basename(fname)}\n")
 
     if collect_map_data:
+        if total_qsos >= 10000:
+            dedup = {}
+            for item in map_data:
+                key = (round(item['lat'], 4), round(item['lon'], 4))
+                if key in dedup:
+                    d = dedup[key]
+                    d['count'] += 1
+                    if item['dist'] > d['dist']:
+                        d['dist'] = item['dist']
+                        d['odx_call'] = item['call']
+                        d['odx_power'] = item['power']
+                    for c in item['cats']:
+                        if c not in d['cats']:
+                            d['cats'].append(c)
+                    if item['band'] not in d['bands']:
+                        d['bands'].append(item['band'])
+                else:
+                    dedup[key] = {
+                        'lat': item['lat'], 'lon': item['lon'],
+                        'cats': item['cats'][:], 'count': 1,
+                        'bands': [item['band']], 'dist': item['dist'],
+                        'odx_call': item['call'], 'odx_power': item['power']
+                    }
+            map_data = list(dedup.values())
         return map_data, my_lat, my_lon
 
 
