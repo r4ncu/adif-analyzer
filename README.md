@@ -1,4 +1,4 @@
-# ADIF Analyzer — QRP-Stat
+# ADIF Analyzer
 
 Веб-приложение для анализа ADIF-файлов (Amateur Data Interchange Format) с визуализацией связей на карте.
 
