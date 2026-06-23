@@ -59,7 +59,8 @@ https://adif-analyzer.onrender.com
 ## Авторы
 
 Оригинальный код: **Андрей UB3BBB**
-Доработка: совместными усилиями ИИ
 Контакт: andrey.R4NCU@gmail.com
 
 Лицензия: AS IS
+
+cu on air 73 es 72
