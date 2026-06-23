@@ -37,6 +37,8 @@ Analysis results are oriented toward the [Club 72](http://club-72.ru/#qrp) activ
 - Yellow marker for operator position
 - Popups: callsign, band, power, distance
 
+<img width="2698" height="3578" alt="ADIF-Analyzer-06-22-2026_05_36_PM" src="https://github.com/user-attachments/assets/1c29a99b-dfc0-4f11-a098-7ea46722192a" />
+
 ### Large File Optimization
 
 - Files **<10,000 QSO**: each QSO as individual marker, lines up to 2,000 points
