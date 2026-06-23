@@ -1,6 +1,8 @@
-# ADIF Analyzer — QRP-Stat
+# ADIF Analyzer
 
 Web application for analyzing ADIF files (Amateur Data Interchange Format) with contact visualization on an interactive map.
+
+https://adif-analyzer.onrender.com
 
 Analysis results are oriented toward the [Club 72](http://club-72.ru/#qrp) activity tables.
 
@@ -15,11 +17,9 @@ Analysis results are oriented toward the [Club 72](http://club-72.ru/#qrp) activ
   - **QRPp** — up to 1W
   - **QRP-X** — up to 0.1W (100mW)
   - **QRPu** — up to 0.01W (10mW)
-- Text power values: `QRP` → 5W, `QRPp` → 1W, `QRP-X` → 0.1W, `QRPu` → 0.01W
 - Band statistics (160M–2M, 70CM) with ODX (longest contact)
 - Top-20 most frequent callsigns
 - Locator and country lookup via QRZ.com (pyhamtools)
-- Correct prefix handling (e.g., LA/KK6IK → QTH for Norway)
 - Distance calculation via Maidenhead locators (pyhamtools + Haversine fallback)
 
 ### Contact Map
@@ -36,7 +36,6 @@ Analysis results are oriented toward the [Club 72](http://club-72.ru/#qrp) activ
 - Auto-zoom on load and category switch
 - Yellow marker for operator position
 - Popups: callsign, band, power, distance
-- Canvas renderer for performance
 
 ### Large File Optimization
 
@@ -58,66 +57,11 @@ Analysis results are oriented toward the [Club 72](http://club-72.ru/#qrp) activ
 - "Hide contact map" checkbox to skip map data collection
 - Multilingual: RU/EN interface, RU/EN statistics
 
-## Running
-
-```bash
-pip install -r requirements.txt
-python3 app.py
-```
-
-Server available at http://localhost:5000
-
-### CLI Mode
-
-```bash
-python3 main_analysis.py <file.adif> [locator]
-python3 main_analysis.py <folder>/ [locator]
-```
-
-## API
-
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/` | Main page |
-| POST | `/analyze` | Upload files and start analysis |
-| GET | `/status/<job_id>` | Task status and result |
-| GET | `/download/<job_id>` | Download TXT |
-| GET | `/map/<job_id>` | Map data (JSON) |
-
-## Technologies
-
-- **Backend**: Python 3, Flask, adif_io, pyhamtools
-- **Frontend**: Vanilla JS, Leaflet.js, CartoDB Spotify Dark tiles
-- **Deployment**: Render.com (gunicorn)
-
-## Dependencies
-
-```
-flask==3.1.3
-adif_io==0.6.1
-pyhamtools==0.12.0
-requests==2.33.1
-gunicorn==23.0.0
-```
-
-## Structure
-
-```
-├── app.py              # Flask server (API + request handling)
-├── main_analysis.py    # ADIF file analysis engine
-├── templates/
-│   └── index.html      # Frontend (HTML + CSS + JS)
-├── uploads/            # Temporary files (results)
-├── requirements.txt    # Dependencies
-├── render.yaml         # Deployment config
-└── Procfile            # Gunicorn config
-```
-
 ## Authors
 
-Original code: **Andrey UB3BBB (R4NCU)**
-Enhanced with AI assistance (Manus & DeepSeek)
+Original code: **Andrey UB3BBB**
 Contact: andrey.R4NCU@gmail.com
-Repository: https://github.com/r4ncu/adif-analyzer
 
 License: AS IS
+
+cu on air 73 es 72
