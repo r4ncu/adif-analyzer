@@ -7,68 +7,120 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
+        :root {
+            --bg: #121212;
+            --bg2: #181818;
+            --text: #e2e8f0;
+            --text2: #b3b3b3;
+            --text3: #64748b;
+            --text4: #535353;
+            --border: #282828;
+            --accent: #38bdf8;
+            --accent-hover: #1d4ed8;
+            --accent-bg: rgba(56, 189, 248, 0.05);
+            --btn-primary: #2563eb;
+            --btn-primary-hover: #1d4ed8;
+            --btn-green: #16a34a;
+            --btn-green-hover: #15803d;
+            --error-bg: rgba(231, 76, 60, 0.1);
+            --error-border: #e74c3c;
+            --error-text: #fca5a5;
+            --ready: #22c55e;
+            --result-bg: #121212;
+            --result-text: #d4d4d4;
+            --dot-border: rgba(255,255,255,0.2);
+        }
+        [data-theme="light"] {
+            --bg: #f5f5f5;
+            --bg2: #ffffff;
+            --text: #1e293b;
+            --text2: #64748b;
+            --text3: #94a3b8;
+            --text4: #999999;
+            --border: #e2e8f0;
+            --accent: #0284c7;
+            --accent-hover: #0369a1;
+            --accent-bg: rgba(2, 132, 199, 0.05);
+            --btn-primary: #2563eb;
+            --btn-primary-hover: #1d4ed8;
+            --btn-green: #16a34a;
+            --btn-green-hover: #15803d;
+            --error-bg: rgba(231, 76, 60, 0.08);
+            --error-border: #e74c3c;
+            --error-text: #dc2626;
+            --ready: #16a34a;
+            --result-bg: #ffffff;
+            --result-text: #334155;
+            --dot-border: rgba(0,0,0,0.15);
+        }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #121212;
-            color: #e2e8f0;
+            background: var(--bg);
+            color: var(--text);
             min-height: 100vh;
             padding: 1.5rem 2rem;
+            transition: background 0.3s, color 0.3s;
         }
         .header-row {
             display: flex;
-            justify-content: center;
+            justify-content: space-between;
             align-items: center;
-            gap: 1rem;
             margin-bottom: 0.3rem;
         }
-        h1 { font-size: 1.8rem; color: #38bdf8; }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        h1 { font-size: 1.8rem; color: var(--accent); }
         .lang-switch { display: flex; gap: 0.4rem; }
         .lang-btn {
             background: none; border: 2px solid transparent; border-radius: 6px;
             font-size: 1.4rem; cursor: pointer; padding: 0.1rem 0.3rem;
             transition: border-color 0.2s, opacity 0.2s; opacity: 0.5;
         }
-        .lang-btn.active { border-color: #38bdf8; opacity: 1; }
+        .lang-btn.active { border-color: var(--accent); opacity: 1; }
         .lang-btn:hover { opacity: 0.8; }
-        .subtitle { text-align: center; color: #b3b3b3; font-size: 0.9rem; margin-bottom: 1.5rem; }
+        .subtitle { text-align: left; color: var(--text2); font-size: 0.9rem; margin-bottom: 1.5rem; }
         .top-row {
             display: flex; gap: 1.5rem; margin-bottom: 1.5rem;
             height: calc(100vh - 200px);
         }
         .top-row > .card { flex: 1; min-width: 0; overflow-y: visible; }
         .card {
-            background: #181818; border: 1px solid #282828;
+            background: var(--bg2); border: 1px solid var(--border);
             border-radius: 12px; padding: 1.5rem; overflow: visible;
+            transition: background 0.3s, border-color 0.3s;
         }
         label {
             display: block; font-weight: 600; margin-bottom: 0.4rem;
-            color: #b3b3b3; font-size: 0.85rem;
+            color: var(--text2); font-size: 0.85rem;
             text-transform: uppercase; letter-spacing: 0.05em;
         }
         input[type="text"] {
             width: 100%; padding: 0.7rem 0.9rem;
-            border: 1px solid #282828; border-radius: 8px;
-            background: #121212; color: #e2e8f0; font-size: 1rem;
-            outline: none; transition: border-color 0.2s;
+            border: 1px solid var(--border); border-radius: 8px;
+            background: var(--bg); color: var(--text); font-size: 1rem;
+            outline: none; transition: border-color 0.2s, background 0.3s, color 0.3s;
         }
-        input[type="text"]:focus { border-color: #38bdf8; }
+        input[type="text"]:focus { border-color: var(--accent); }
         .input-row { display: flex; gap: 1rem; margin-bottom: 1rem; }
         .input-row > div { flex: 1; }
         .file-zone {
-            border: 2px dashed #282828; border-radius: 8px;
+            border: 2px dashed var(--border); border-radius: 8px;
             padding: 1rem; text-align: center; cursor: pointer;
             transition: border-color 0.2s, background 0.2s; margin-bottom: 0.5rem;
         }
         .file-zone:hover, .file-zone.dragover {
-            border-color: #38bdf8; background: rgba(56, 189, 248, 0.05);
+            border-color: var(--accent); background: var(--accent-bg);
         }
         .file-zone input { display: none; }
         .file-zone .icon { font-size: 2rem; margin-bottom: 0.5rem; }
-        .file-zone p { color: #64748b; font-size: 0.9rem; }
-        .file-list { margin-top: 0.5rem; font-size: 0.85rem; color: #b3b3b3; }
+        .file-zone p { color: var(--text3); font-size: 0.9rem; }
+        .file-list { margin-top: 0.5rem; font-size: 0.85rem; color: var(--text2); }
         .file-list span {
-            display: inline-block; background: #282828;
+            display: inline-block; background: var(--border);
             padding: 0.2rem 0.6rem; border-radius: 4px; margin: 0.2rem 0.2rem 0.2rem 0;
         }
         .btn {
@@ -78,70 +130,95 @@
             text-transform: uppercase; letter-spacing: 0.05em;
         }
         .btn:active { transform: scale(0.98); }
-        .btn-primary { background: #2563eb; color: #fff; }
-        .btn-primary:hover { background: #1d4ed8; }
-        .btn-primary:disabled { background: #282828; color: #64748b; cursor: not-allowed; }
+        .btn-primary { background: var(--btn-primary); color: #fff; }
+        .btn-primary:hover { background: var(--btn-primary-hover); }
+        .btn-primary:disabled { background: var(--border); color: var(--text3); cursor: not-allowed; }
         .btn-download {
             display: inline-block; padding: 0.6rem 1.2rem;
-            background: #16a34a; color: #fff; border: none; border-radius: 8px;
+            background: var(--btn-green); color: #fff; border: none; border-radius: 8px;
             font-size: 0.9rem; font-weight: 600; cursor: pointer; text-decoration: none;
         }
-        .btn-download:hover { background: #15803d; }
+        .btn-download:hover { background: var(--btn-green-hover); }
         .btn-download:disabled, .btn-download.disabled {
-            background: #282828; color: #64748b; cursor: not-allowed; pointer-events: none;
+            background: var(--border); color: var(--text3); cursor: not-allowed; pointer-events: none;
         }
         .spinner { display: none; text-align: center; padding: 2rem; }
         .spinner.active { display: block; }
         .spinner::after {
             content: ''; display: inline-block; width: 32px; height: 32px;
-            border: 3px solid #282828; border-top-color: #38bdf8;
+            border: 3px solid var(--border); border-top-color: var(--accent);
             border-radius: 50%; animation: spin 0.8s linear infinite;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
-        .spinner-text { margin-top: 0.8rem; color: #b3b3b3; font-size: 0.9rem; }
+        .spinner-text { margin-top: 0.8rem; color: var(--text2); font-size: 0.9rem; }
         .result-header {
             display: flex; justify-content: space-between;
             align-items: center; margin-bottom: 0.5rem;
         }
-        .result-header h2 { font-size: 1.2rem; color: #535353; transition: color 0.3s; }
-        .result-header h2.ready { color: #22c55e; }
+        .result-header h2 { font-size: 1.2rem; color: var(--text4); transition: color 0.3s; }
+        .result-header h2.ready { color: var(--ready); }
         .result-text {
-            background: #121212; border: 1px solid #282828; border-radius: 8px;
+            background: var(--result-bg); border: 1px solid var(--border); border-radius: 8px;
             padding: 1rem; white-space: pre-wrap;
             font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
             font-size: 0.8rem; line-height: 1.5;
-            flex: 1; overflow-y: auto; color: #d4d4d4;
+            flex: 1; overflow-y: auto; color: var(--result-text);
+            transition: background 0.3s, border-color 0.3s, color 0.3s;
         }
         .error {
-            background: rgba(231, 76, 60, 0.1); border: 1px solid #e74c3c;
-            color: #fca5a5; padding: 0.8rem 1rem; border-radius: 8px; display: none;
+            background: var(--error-bg); border: 1px solid var(--error-border);
+            color: var(--error-text); padding: 0.8rem 1rem; border-radius: 8px; display: none;
         }
         .error.active { display: block; }
-        .power-row { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 1rem; }
+        .power-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.8rem; margin-bottom: 1rem; }
         .power-row label {
-            margin-bottom: 0; white-space: nowrap;
+            margin-bottom: 0;
             display: flex; align-items: center; gap: 0.4rem; cursor: pointer;
         }
-        .power-row input[type="text"] { width: 100px; padding: 0.55rem 0.7rem; font-size: 0.9rem; }
-        .power-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: #2563eb; cursor: pointer; }
+        .power-row input[type="text"] { width: 100px; min-width: 80px; flex: 1; padding: 0.55rem 0.7rem; font-size: 0.9rem; }
+        .power-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--btn-primary); cursor: pointer; }
         .btn-apply {
             padding: 0.55rem 1rem; border: none; border-radius: 6px;
-            background: #2563eb; color: #fff; font-size: 0.85rem;
+            background: var(--btn-primary); color: #fff; font-size: 0.85rem;
             font-weight: 600; cursor: pointer; white-space: nowrap;
         }
-        .btn-apply:hover { background: #1d4ed8; }
-        .btn-apply:disabled { background: #282828; color: #64748b; cursor: not-allowed; }
+        .btn-apply:hover { background: var(--btn-primary-hover); }
+        .btn-apply:disabled { background: var(--border); color: var(--text3); cursor: not-allowed; }
         #mapSection { display: none; }
         #mapSection.active { display: block; }
         .leaflet-control-attribution a:first-child { display: none; }
-        #mapContainer { width: 100%; height: calc(100vh - 120px); border-radius: 8px; border: 1px solid #282828; }
+        #mapContainer { width: 100%; height: calc(100vh - 120px); border-radius: 8px; border: 1px solid var(--border); transition: border-color 0.3s; }
         .map-legend { display: flex; flex-wrap: wrap; gap: 1rem 1.5rem; margin-bottom: 0.8rem; justify-content: flex-start; }
-        .legend-item { display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: #b3b3b3; cursor: pointer; user-select: none; white-space: nowrap; }
-        .legend-item input[type="radio"] { width: 14px; height: 14px; accent-color: #38bdf8; cursor: pointer; flex-shrink: 0; }
-        .legend-dot { width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.2); }
-        .map-stats { margin-top: 0.6rem; font-size: 0.85rem; color: #b3b3b3; }
+        .legend-item { display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: var(--text2); cursor: pointer; user-select: none; white-space: nowrap; }
+        .legend-item input[type="radio"] { width: 14px; height: 14px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
+        .legend-dot { width: 12px; height: 12px; border-radius: 50%; border: 1px solid var(--dot-border); }
+        .map-stats { margin-top: 0.6rem; font-size: 0.85rem; color: var(--text2); }
         .right-card { display: flex; flex-direction: column; }
         .right-card .result-text { flex: 1; }
+        .theme-toggle { display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
+        .theme-toggle input { display: none; }
+        .theme-toggle .slider {
+            width: 72px; height: 36px; background: #1a1a2e; border-radius: 18px;
+            position: relative; transition: background 0.3s; border: 2px solid var(--border);
+        }
+        .theme-toggle .slider::after {
+            content: ""; position: absolute; top: 3px; left: 3px;
+            width: 26px; height: 26px; background: #b3b3b3; border-radius: 50%;
+            transition: transform 0.3s, background 0.3s;
+        }
+        .theme-toggle .slider .icon-dark {
+            position: absolute; top: 7px; right: 12px; font-size: 16px;
+            line-height: 1; color: #ffd700; pointer-events: none;
+        }
+        .theme-toggle .slider .icon-light {
+            position: absolute; top: 50%; left: 11px; transform: translateY(-50%);
+            font-size: 20px; line-height: 1; color: #f59e0b;
+            pointer-events: none; display: none;
+        }
+        .theme-toggle input:checked + .slider { background: #e8e8e8; }
+        .theme-toggle input:checked + .slider::after { transform: translateX(36px); background: #808080; }
+        .theme-toggle input:checked + .slider .icon-dark { display: none; }
+        .theme-toggle input:checked + .slider .icon-light { display: block; }
         @media (max-width: 768px) {
             .top-row { flex-direction: column; height: auto; }
             body { padding: 1rem; }
@@ -150,11 +227,20 @@
 </head>
 <body>
     <div class="header-row">
-        <h1>ADIF Analyzer</h1>
-        <div class="lang-switch">
-            <button class="lang-btn active" id="langRu" title="Русский">🇷🇺</button>
-            <button class="lang-btn" id="langEn" title="English">🇬🇧</button>
+        <div class="header-left">
+            <h1>ADIF Analyzer</h1>
+            <div class="lang-switch">
+                <button class="lang-btn active" id="langRu" title="Русский">🇷🇺</button>
+                <button class="lang-btn" id="langEn" title="English">🇬🇧</button>
+            </div>
         </div>
+        <label class="theme-toggle">
+            <input type="checkbox" id="themeSwitch">
+            <span class="slider">
+                <span class="icon-dark">&#9790;</span>
+                <span class="icon-light">&#9728;</span>
+            </span>
+        </label>
     </div>
     <p class="subtitle" data-i18n="subtitle">Анализ ADIF файлов — статистика по странам, локаторам и мощности</p>
 
@@ -219,7 +305,7 @@
     </div>
 
     <div id="mapSection" class="card">
-        <h2 style="color:#38bdf8;font-size:1.2rem;margin-bottom:0.8rem;" data-i18n="map_title">Карта связей</h2>
+        <h2 style="color:var(--accent);font-size:1.2rem;margin-bottom:0.8rem;" data-i18n="map_title">Карта связей</h2>
         <div class="map-legend" id="mapLegend">
             <label class="legend-item"><input type="radio" name="cat" checked data-cat="ALL"><div class="legend-dot" style="background:#3b82f6"></div><span>ALL</span></label>
             <label class="legend-item"><input type="radio" name="cat" data-cat="QRP"><div class="legend-dot" style="background:#22c55e"></div><span>QRP (≤5W)</span></label>
@@ -444,6 +530,9 @@
 
         applyLang();
 
+        const DARK_TILES = 'https://{s}.basemaps.cartocdn.com/spotify_dark/{z}/{x}/{y}{r}.png';
+        const LIGHT_TILES = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+
         const CAT_COLORS = {
             'ALL': '#3b82f6',
             'QRP': '#22c55e',
@@ -455,11 +544,31 @@
         let map = null;
         let mapLayers = {};
         let catBounds = {};
+        let tileLayer = null;
+
+        let currentTheme = localStorage.getItem('adif_theme') || 'dark';
+
+        function applyTheme(theme) {
+            currentTheme = theme;
+            document.documentElement.setAttribute('data-theme', theme);
+            document.getElementById('themeSwitch').checked = theme === 'light';
+            localStorage.setItem('adif_theme', theme);
+            if (tileLayer) {
+                tileLayer.setUrl(theme === 'light' ? LIGHT_TILES : DARK_TILES);
+            }
+        }
+
+        document.getElementById('themeSwitch').addEventListener('change', e => {
+            applyTheme(e.target.checked ? 'light' : 'dark');
+        });
+
+        applyTheme(currentTheme);
 
         function initMap() {
             if (map) { map.remove(); map = null; }
             map = L.map('mapContainer', {preferCanvas: true}).setView([40, 0], 2);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/spotify_dark/{z}/{x}/{y}{r}.png', {
+            const url = currentTheme === 'light' ? LIGHT_TILES : DARK_TILES;
+            tileLayer = L.tileLayer(url, {
                 attribution: '&copy; OpenStreetMap &copy; CARTO',
                 maxZoom: 18
             }).addTo(map);
@@ -567,8 +676,8 @@
             }
         });
     </script>
-    <footer style="text-align:center; padding:2rem 0 0; color:#535353; font-size:0.8rem;">
-        <a href="https://github.com/r4ncu/adif-analyzer" style="color:#535353; text-decoration:none;">https://github.com/r4ncu/adif-analyzer</a>
+    <footer style="text-align:center; padding:2rem 0 0; color:var(--text4); font-size:0.8rem;">
+        <a href="https://github.com/r4ncu/adif-analyzer" style="color:var(--text4); text-decoration:none;">https://github.com/r4ncu/adif-analyzer</a>
     </footer>
 </body>
 </html>
