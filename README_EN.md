@@ -2,7 +2,7 @@
 
 Web application for analyzing ADIF files (Amateur Data Interchange Format) with contact visualization on an interactive map.
 
-https://adif-analyzer.onrender.com
+https://adif.r4ncu.ru
 
 Analysis results are oriented toward the [Club 72](http://club-72.ru/#qrp) activity tables.
 
