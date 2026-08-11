@@ -2,7 +2,7 @@
 
 Веб-приложение для анализа ADIF-файлов (Amateur Data Interchange Format) с визуализацией связей на карте.
 
-https://adif-analyzer.onrender.com
+https://adif.r4ncu.ru
 
 Результаты анализа ориентированы на таблицы активности [Клуба 72](http://club-72.ru/#qrp).
 
